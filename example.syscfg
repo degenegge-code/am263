@@ -9,6 +9,8 @@
 /**
  * Import the modules used in this configuration.
  */
+const ecap            = scripting.addModule("/drivers/ecap/ecap", {}, false);
+const ecap1           = ecap.addInstance();
 const epwm            = scripting.addModule("/drivers/epwm/epwm");
 const epwm1           = epwm.addInstance();
 const epwm2           = epwm.addInstance();
@@ -48,6 +50,10 @@ const int_xbar3       = int_xbar.addInstance();
 /**
  * Write custom configuration values to the imported modules.
  */
+ecap1.$name               = "CONFIG_ECAP0";
+ecap1.useInterrupts       = false;
+ecap1.counterResetOnEvent = ["ECAP_EVENT_2"];
+
 epwm.enableWarning = true;
 epwm.enableInfo    = true;
 
@@ -107,6 +113,7 @@ const soc_ctrl_ecap    = scripting.addModule("/drivers/soc_ctrl/v0/subModules/so
 const soc_ctrl_ecap1   = soc_ctrl_ecap.addInstance({}, false);
 soc_ctrl_ecap1.$name   = "soc_ctrl_ecap0";
 soc_ctrl.soc_ctrl_ecap = soc_ctrl_ecap1;
+ecap.ecapSocControls   = soc_ctrl_ecap1;
 
 const soc_ctrl_epwm    = scripting.addModule("/drivers/soc_ctrl/v0/subModules/soc_ctrl_epwm", {}, false);
 const soc_ctrl_epwm1   = soc_ctrl_epwm.addInstance({}, false);

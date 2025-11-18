@@ -50,7 +50,8 @@ uint32_t gEpwm1Base = CONFIG_EPWM1_BASE_ADDR;   //base adresu epwm USM si vezmi 
 static void App_epwmIntrISR_0(void *handle);    //zatim je to jen pro clear int
 static void App_epwmIntrISR_1(void *handle);
 
-void epwm_updown_main(void *args)
+
+void epwm_updown(void *args)
 {
     int32_t  status;            //status
     HwiP_Params  hwiPrms_0;     //initialize interrupt parameters
@@ -101,14 +102,13 @@ void epwm_updown_main(void *args)
     compAVal1 = EPWM_getCounterCompareValue(gEpwm1Base, EPWM_COUNTER_COMPARE_A);
     compBVal0 = EPWM_getCounterCompareValue(gEpwm0Base, EPWM_COUNTER_COMPARE_B);
     compBVal1 = EPWM_getCounterCompareValue(gEpwm1Base, EPWM_COUNTER_COMPARE_B);
+}
 
+//konec mainu
+void epwm_updown_close(void)
+{
     DebugP_log("epwm0: CMPA: %i, CMPB: %i \r\n", compAVal0, compBVal0); //kontrolní 
     DebugP_log("epwm1: CMPA: %i, CMPB: %i \r\n", compAVal1, compBVal1);
-    
-    while(1)        //teď nekonečno
-    {
-        ClockP_sleep(10);                                              //wait 10s a pracuj přes interrupty
-    }
 
     DebugP_log("EPWM Action Qualifier Module Test Passed!!\r\n");
     DebugP_log("All Tests have Passed!!");
