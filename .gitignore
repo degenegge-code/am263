@@ -1,0 +1,10 @@
+Release/
+.settings/
+targetConfigs/
+.clangd
+.cproject
+.project
+*.rprc
+*.xs
+makefile_ccs_bootimage_gen
+.cssproject
