@@ -69,6 +69,7 @@ epwm1.EPWM.$assign                                               = "EPWM0";
 epwm1.EPWM.A.$assign                                             = "EPWM0_A";
 epwm1.EPWM.B.$assign                                             = "EPWM0_B";
 
+epwm2.$name                                                      = "CONFIG_EPWM1";
 epwm2.epwmCounterCompare_cmpA                                    = 50;
 epwm2.epwmEventTrigger_enableInterrupt                           = true;
 epwm2.epwmEventTrigger_interruptEventCount                       = "3";
@@ -83,7 +84,7 @@ epwm2.epwmTimebase_clockDiv                                      = "EPWM_CLOCK_D
 epwm2.epwmTimebase_period                                        = 1000;
 epwm2.epwmCounterCompare_cmpB                                    = 50;
 epwm2.epwmGroup                                                  = "EPWM_GROUP1";
-epwm2.$name                                                      = "CONFIG_EPWM1";
+epwm2.epwmTimebase_counterValue                                  = 100;
 epwm2.EPWM.$assign                                               = "EPWM1";
 epwm2.EPWM.A.$assign                                             = "EPWM1_A";
 epwm2.EPWM.B.$assign                                             = "EPWM1_B";
