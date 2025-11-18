@@ -49,6 +49,7 @@
  * On AM263x CC/ AM263Px CC with HSEC Dock,
  * Probe the following on the HSEC pins
  *  - EPWM 0A/0B : 49 / 51
+ *  - EPWM 1A/1B : 53 / 55
  * ePWM0A se sepne za ZERO a vypne při CMPA - tzn při čítání NAHORU, dolu je no action
  * ePWM0B se zapne na TBPRD a vypne na CMPB - tzn při čítání DOLU, nahoru no asction
  */
@@ -64,38 +65,39 @@
 #define EPWM0_TIMER_TBPRD   1000// Period register, prd je vrcholová hodnota - tak proč to kurva chce v syscfgu 1000? 
 #define EPWM0_WIDTH     EPWM0_TIMER_TBPRD/2 //čtvrztin periody je puls
 
+
 //USM:
-// synchro s hbr ale o 5%T posunuto PŘED něj
-//TODO: tohle
+#define OFFSET_TICS     EPWM0_TIMER_TBPRD/20 // synchro s hbr ale o 5%T posunuto PŘED něj
 
 
 //proměnné
-volatile uint16_t compAVal, compBVal;   //CMPA CMPB
+volatile uint16_t compAVal0, compBVal0;   //CMPA CMPB
+volatile uint16_t compAVal1, compBVal1;   //CMPA CMPB
 static HwiP_Object  gEpwmHwiObject_0; //objekt h bridge
-//objekt usm
+static HwiP_Object  gEpwmHwiObject_1;//objekt usm
 uint32_t gEpwm0Base = CONFIG_EPWM0_BASE_ADDR; //base adresu epwm H bridge si vezmi z konfigu
-//base adresu epwm USM si vezmi z konfigu
+uint32_t gEpwm1Base = CONFIG_EPWM1_BASE_ADDR;//base adresu epwm USM si vezmi z konfigu
 
 //prototypy:
 static void App_epwmIntrISR_0(void *handle);
-
+static void App_epwmIntrISR_1(void *handle);
 
 void epwm_updown_main(void *args)
 {
-
     int32_t  status;        //status
     HwiP_Params  hwiPrms_0; //initialize interrupt parameters
+    HwiP_Params  hwiPrms_1; //initialize interrupt parameters
 
     //open drivers for console
     Drivers_open();
     Board_driversOpen();
 
-    uint32_t epwmsMask = (1U << 0U) | (1U << 1U) | (1U << 2U);      //(?)
+    uint32_t epwmsMask = (1U << 0U) | (1U << 1U) ;      //nastav masky pro první dvě epwemky
 
     // Check the syscfg for configurations !!!
 
-    DebugP_log("EPWM Action Qualifier Module Test Started ...\r\n");
-    DebugP_log("EPWM Action Qualifier Module using tadytenbordel for 100 Secs \r\n");
+    DebugP_log("EPWMTest Started ...\r\n");
+    DebugP_log("EPWM Action Qualifier Module using tadytenbordel\r\n");
 
     SOC_setMultipleEpwmTbClk(epwmsMask, FALSE);     // Disabling tbclk sync for EPWM 0 for configuration // for 0 1 2 epwms
 
@@ -110,15 +112,28 @@ void epwm_updown_main(void *args)
     status              =   HwiP_construct(&gEpwmHwiObject_0, &hwiPrms_0);
     DebugP_assert(status == SystemP_SUCCESS);
 
-    //set comp values
+    // EPWM1 register and enable interrupt:
+    HwiP_Params_init(&hwiPrms_1);
+    hwiPrms_1.intNum      = CSLR_R5FSS0_CORE0_CONTROLSS_INTRXBAR0_OUT_1;
+    hwiPrms_1.isPulse     = APP_INT_IS_PULSE;
+    hwiPrms_1.callback    = &App_epwmIntrISR_1;
+    status              = HwiP_construct(&gEpwmHwiObject_1, &hwiPrms_1);
+    DebugP_assert(status == SystemP_SUCCESS);
+    
+    //set comp values HB
     EPWM_setCounterCompareValue(gEpwm0Base, EPWM_COUNTER_COMPARE_A, EPWM0_WIDTH);
     EPWM_setCounterCompareValue(gEpwm0Base, EPWM_COUNTER_COMPARE_B, EPWM0_TIMER_TBPRD - EPWM0_WIDTH);
+    //set comp values USM
+    EPWM_setCounterCompareValue(gEpwm1Base, EPWM_COUNTER_COMPARE_A, EPWM0_WIDTH);
+    EPWM_setCounterCompareValue(gEpwm1Base, EPWM_COUNTER_COMPARE_B, EPWM0_TIMER_TBPRD - EPWM0_WIDTH);
 
     EPWM_clearEventTriggerInterruptFlag(gEpwm0Base);    //Clear any pending interrupts if any
+    EPWM_clearEventTriggerInterruptFlag(gEpwm1Base);
 
-    SOC_setMultipleEpwmTbClk(epwmsMask, TRUE); // Enabling tbclk sync for EPWM 0 after configurations
+    SOC_setMultipleEpwmTbClk(epwmsMask, TRUE); // Enabling tbclk sync for EPWM 0 after configurations, i pro epwm1
 
-    DebugP_log("CMPA: %i, CMPB: %i \r\n", compAVal, compBVal);
+    DebugP_log("epwm0: CMPA: %i, CMPB: %i \r\n", compAVal0, compBVal0);
+    DebugP_log("epwm1: CMPA: %i, CMPB: %i \r\n", compAVal1, compBVal1);
 
     while(1)
     {
@@ -136,10 +151,14 @@ void epwm_updown_main(void *args)
 //interrupt service rutina - vezmi cmpam hodnoty, narvi je do vypisu, vyčisti přerušení
 static void App_epwmIntrISR_0(void *handle)
 {
-    compAVal = EPWM_getCounterCompareValue(gEpwm0Base, EPWM_COUNTER_COMPARE_A);
-    compBVal = EPWM_getCounterCompareValue(gEpwm0Base, EPWM_COUNTER_COMPARE_B);
+//    compAVal0 = EPWM_getCounterCompareValue(gEpwm0Base, EPWM_COUNTER_COMPARE_A);
+//    compBVal0 = EPWM_getCounterCompareValue(gEpwm0Base, EPWM_COUNTER_COMPARE_B);
     EPWM_clearEventTriggerInterruptFlag(gEpwm0Base);     // Clear any pending interrupts if any
 }
 
+static void App_epwmIntrISR_1(void *handle)
+{
+    EPWM_clearEventTriggerInterruptFlag(gEpwm1Base);     // Clear any pending interrupts if any
+}
 
 
