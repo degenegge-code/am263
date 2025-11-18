@@ -11,6 +11,7 @@
  */
 const epwm            = scripting.addModule("/drivers/epwm/epwm");
 const epwm1           = epwm.addInstance();
+const epwm2           = epwm.addInstance();
 const debug_log       = scripting.addModule("/kernel/dpl/debug_log");
 const dpl_cfg         = scripting.addModule("/kernel/dpl/dpl_cfg");
 const mpu_armv7       = scripting.addModule("/kernel/dpl/mpu_armv7", {}, false);
@@ -69,6 +70,27 @@ epwm1.epwmCounterCompare_cmpD                                    = 50;
 epwm1.EPWM.$assign                                               = "EPWM0";
 epwm1.EPWM.A.$assign                                             = "EPWM0_A";
 epwm1.EPWM.B.$assign                                             = "EPWM0_B";
+
+epwm2.$name                                                      = "CONFIG_EPWM1";
+epwm2.epwmEventTrigger_enableInterrupt                           = true;
+epwm2.epwmEventTrigger_interruptEventCount                       = "3";
+epwm2.epwmTimebase_counterMode                                   = "EPWM_COUNTER_MODE_UP_DOWN";
+epwm2.epwmActionQualifier_EPWM_AQ_OUTPUT_A_ON_TIMEBASE_UP_CMPA   = "EPWM_AQ_OUTPUT_LOW";
+epwm2.epwmActionQualifier_EPWM_AQ_OUTPUT_A_ON_TIMEBASE_ZERO      = "EPWM_AQ_OUTPUT_HIGH";
+epwm2.epwmActionQualifier_EPWM_AQ_OUTPUT_A_shadowMode            = true;
+epwm2.epwmActionQualifier_EPWM_AQ_OUTPUT_B_shadowMode            = true;
+epwm2.epwmActionQualifier_EPWM_AQ_OUTPUT_B_ON_TIMEBASE_PERIOD    = "EPWM_AQ_OUTPUT_HIGH";
+epwm2.epwmActionQualifier_EPWM_AQ_OUTPUT_B_ON_TIMEBASE_DOWN_CMPB = "EPWM_AQ_OUTPUT_LOW";
+epwm2.epwmTimebase_clockDiv                                      = "EPWM_CLOCK_DIVIDER_2";
+epwm2.epwmTimebase_period                                        = 1000;
+epwm2.epwmCounterCompare_cmpA                                    = 50;
+epwm2.epwmCounterCompare_cmpB                                    = 50;
+epwm2.epwmCounterCompare_cmpC                                    = 50;
+epwm2.epwmCounterCompare_cmpD                                    = 50;
+epwm2.epwmTimebase_counterValue                                  = 100;
+epwm2.EPWM.$assign                                               = "EPWM1";
+epwm2.EPWM.A.$assign                                             = "EPWM1_A";
+epwm2.EPWM.B.$assign                                             = "EPWM1_B";
 
 const soc_ctrl_adc    = scripting.addModule("/drivers/soc_ctrl/v0/subModules/soc_ctrl_adc", {}, false);
 const soc_ctrl_adc1   = soc_ctrl_adc.addInstance({}, false);

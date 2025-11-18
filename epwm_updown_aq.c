@@ -1,34 +1,3 @@
-/*
- *  Copyright (C) 2024 Texas Instruments Incorporated
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions
- *  are met:
- *
- *    Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *
- *    Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the
- *    distribution.
- *
- *    Neither the name of Texas Instruments Incorporated nor the names of
- *    its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
 
 #include <kernel/dpl/DebugP.h>
 #include <kernel/dpl/SemaphoreP.h>
@@ -40,11 +9,11 @@
 
 /*
  * Example Description
- * This example configures EPWM0 EPWM0A and EPWM0B.
+ * This example configures EPWM0's and EPWM1's EPWMA and EPWMB 
  *
  * The TB counter is in up-down count mode for this example.
  *
- * During the test, monitor EPWM0 outputs on an oscilloscope.
+ * During the test, monitor EPWM0,1 outputs on an oscilloscope.
  *
  * On AM263x CC/ AM263Px CC with HSEC Dock,
  * Probe the following on the HSEC pins
@@ -52,57 +21,53 @@
  *  - EPWM 1A/1B : 53 / 55
  * ePWM0A se sepne za ZERO a vypne při CMPA - tzn při čítání NAHORU, dolu je no action
  * ePWM0B se zapne na TBPRD a vypne na CMPB - tzn při čítání DOLU, nahoru no asction
+ * 
+ * ePWM1A and B identical functions - but timebase shifted 5% behind 
+ * nastavení těchto funkcí v .syscfg
+ *
  */
 
-
-// FIXME : To be removed after syscfg integration: wtf???
 #define APP_INT_IS_PULSE    (1U)
-
-#define EPWM_FREQ 50000u    //50khz - to odpovídá i pile
+#define EPWM_FREQ 50000u    //50khz - to odpovídá i pile - toto nastaveno v syscfg, zdejší nepoužito
 
 //H bridge:
 // prd = F_ 1/f /2 /prsc , 400Mhz / 50kHz /2 /2 = 2000
-#define EPWM0_TIMER_TBPRD   1000// Period register, prd je vrcholová hodnota - tak proč to kurva chce v syscfgu 1000? 
-#define EPWM0_WIDTH     EPWM0_TIMER_TBPRD/2 //čtvrztin periody je puls
-
+#define EPWM_TIMER_TBPRD    1000// Period register, prd je vrcholová hodnota - ? - toto nastaveno v syscfg EPWM Time Base, zdejší dále nepoužito
+#define EPWM_WIDTH          EPWM_TIMER_TBPRD/2 //čtvrztin periody je puls 
 
 //USM:
-#define OFFSET_TICS     EPWM0_TIMER_TBPRD/10 // synchro s hbr ale o 5%T posunuto PŘED něj
+#define OFFSET_TICS     EPWM_TIMER_TBPRD/10 // synchro s hbr ale o 5%T posunuto PŘED něj - toto nastaveno v syscfg EPWM Time Base Initial Counter Value, zdejší nepoužito
 
 
-//proměnné
-volatile uint16_t compAVal0, compBVal0;   //CMPA CMPB
-volatile uint16_t compAVal1, compBVal1;   //CMPA CMPB
-static HwiP_Object  gEpwmHwiObject_0; //objekt h bridge
-static HwiP_Object  gEpwmHwiObject_1;//objekt usm
-uint32_t gEpwm0Base = CONFIG_EPWM0_BASE_ADDR; //base adresu epwm H bridge si vezmi z konfigu
-uint32_t gEpwm1Base = CONFIG_EPWM1_BASE_ADDR;//base adresu epwm USM si vezmi z konfigu
+//proměnné:
+volatile uint16_t compAVal0, compBVal0, compAVal1, compBVal1;         //CMPA CMPB pro epwm 0a1
+static HwiP_Object  gEpwmHwiObject_0;           //objekt h bridge
+static HwiP_Object  gEpwmHwiObject_1;           //objekt usm
+uint32_t gEpwm0Base = CONFIG_EPWM0_BASE_ADDR;   //base adresu epwm H bridge si vezmi z konfigu
+uint32_t gEpwm1Base = CONFIG_EPWM1_BASE_ADDR;   //base adresu epwm USM si vezmi z konfigu
 
 //prototypy:
-static void App_epwmIntrISR_0(void *handle);
+static void App_epwmIntrISR_0(void *handle);    //zatim je to jen pro clear int
 static void App_epwmIntrISR_1(void *handle);
 
 void epwm_updown_main(void *args)
 {
-    int32_t  status;        //status
-    HwiP_Params  hwiPrms_0; //initialize interrupt parameters
-    HwiP_Params  hwiPrms_1; //initialize interrupt parameters
+    int32_t  status;            //status
+    HwiP_Params  hwiPrms_0;     //initialize interrupt parameters
+    HwiP_Params  hwiPrms_1;     //initialize interrupt parameters
 
-    //open drivers for console
+    //open drivers for console, uart
     Drivers_open();
     Board_driversOpen();
 
-    uint32_t epwmsMask = (1U << 0U) | (1U << 1U) ;      //nastav masky pro první dvě epwemky
-
-    // Check the syscfg for configurations !!!
+    uint32_t epwmsMask = (1U << 0U) | (1U << 1U) ;      //nastav masku pro první dvě epwemky
+                                                        // Check the syscfg for configurations !!!
 
     DebugP_log("EPWMTest Started ...\r\n");
     DebugP_log("EPWM Action Qualifier Module using tadytenbordel\r\n");
 
     SOC_setMultipleEpwmTbClk(epwmsMask, FALSE);     // Disabling tbclk sync for EPWM 0 for configuration // for 0 1 2 epwms
 
-    //init: 
-    //epwm0Info.epwmModule = gEpwm0Base;    // Set base as ePWM0
 
     // EPWM0 register and enable interrupt:
     HwiP_Params_init(&hwiPrms_0);
@@ -120,24 +85,29 @@ void epwm_updown_main(void *args)
     status              = HwiP_construct(&gEpwmHwiObject_1, &hwiPrms_1);
     DebugP_assert(status == SystemP_SUCCESS);
 
-    //set comp values HB
-    EPWM_setCounterCompareValue(gEpwm0Base, EPWM_COUNTER_COMPARE_A, EPWM0_WIDTH);
-    EPWM_setCounterCompareValue(gEpwm0Base, EPWM_COUNTER_COMPARE_B, EPWM0_TIMER_TBPRD - EPWM0_WIDTH);
-    //set comp values USM
-    EPWM_setCounterCompareValue(gEpwm1Base, EPWM_COUNTER_COMPARE_A, EPWM0_WIDTH);
-    EPWM_setCounterCompareValue(gEpwm1Base, EPWM_COUNTER_COMPARE_B, EPWM0_TIMER_TBPRD - EPWM0_WIDTH);
+    //set comp values HB:
+    EPWM_setCounterCompareValue(gEpwm0Base, EPWM_COUNTER_COMPARE_A, EPWM_WIDTH);
+    EPWM_setCounterCompareValue(gEpwm0Base, EPWM_COUNTER_COMPARE_B, EPWM_TIMER_TBPRD - EPWM_WIDTH);
+    //set comp values USM:
+    EPWM_setCounterCompareValue(gEpwm1Base, EPWM_COUNTER_COMPARE_A, EPWM_WIDTH);
+    EPWM_setCounterCompareValue(gEpwm1Base, EPWM_COUNTER_COMPARE_B, EPWM_TIMER_TBPRD - EPWM_WIDTH);
 
-    EPWM_clearEventTriggerInterruptFlag(gEpwm0Base);    //Clear any pending interrupts if any
+    EPWM_clearEventTriggerInterruptFlag(gEpwm0Base);            //Clear any pending interrupts if any
     EPWM_clearEventTriggerInterruptFlag(gEpwm1Base);
 
-    SOC_setMultipleEpwmTbClk(epwmsMask, TRUE); // Enabling tbclk sync for EPWM 0 after configurations, i pro epwm1
+    SOC_setMultipleEpwmTbClk(epwmsMask, TRUE);      //Enabling tbclk sync for EPWM 0 after configurations, i pro epwm1
 
-    DebugP_log("epwm0: CMPA: %i, CMPB: %i \r\n", compAVal0, compBVal0);
+    compAVal0 = EPWM_getCounterCompareValue(gEpwm0Base, EPWM_COUNTER_COMPARE_A);
+    compAVal1 = EPWM_getCounterCompareValue(gEpwm1Base, EPWM_COUNTER_COMPARE_A);
+    compBVal0 = EPWM_getCounterCompareValue(gEpwm0Base, EPWM_COUNTER_COMPARE_B);
+    compBVal1 = EPWM_getCounterCompareValue(gEpwm1Base, EPWM_COUNTER_COMPARE_B);
+
+    DebugP_log("epwm0: CMPA: %i, CMPB: %i \r\n", compAVal0, compBVal0); //kontrolní 
     DebugP_log("epwm1: CMPA: %i, CMPB: %i \r\n", compAVal1, compBVal1);
-
-    while(1)
+    
+    while(1)        //teď nekonečno
     {
-        ClockP_sleep(10);  //wait 100s a pracuj přes interrupty
+        ClockP_sleep(10);                                              //wait 10s a pracuj přes interrupty
     }
 
     DebugP_log("EPWM Action Qualifier Module Test Passed!!\r\n");
@@ -147,12 +117,9 @@ void epwm_updown_main(void *args)
     Drivers_close();
 }
 
-
 //interrupt service rutina - vezmi cmpam hodnoty, narvi je do vypisu, vyčisti přerušení
 static void App_epwmIntrISR_0(void *handle)
 {
-//    compAVal0 = EPWM_getCounterCompareValue(gEpwm0Base, EPWM_COUNTER_COMPARE_A);
-//    compBVal0 = EPWM_getCounterCompareValue(gEpwm0Base, EPWM_COUNTER_COMPARE_B);
     EPWM_clearEventTriggerInterruptFlag(gEpwm0Base);     // Clear any pending interrupts if any
 }
 
