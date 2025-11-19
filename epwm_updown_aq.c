@@ -102,6 +102,9 @@ void epwm_updown(void *args)
     compAVal1 = EPWM_getCounterCompareValue(gEpwm1Base, EPWM_COUNTER_COMPARE_A);
     compBVal0 = EPWM_getCounterCompareValue(gEpwm0Base, EPWM_COUNTER_COMPARE_B);
     compBVal1 = EPWM_getCounterCompareValue(gEpwm1Base, EPWM_COUNTER_COMPARE_B);
+
+    DebugP_log("epwms set\n");
+
 }
 
 //konec mainu
@@ -111,7 +114,7 @@ void epwm_updown_close(void)
     DebugP_log("epwm1: CMPA: %i, CMPB: %i \r\n", compAVal1, compBVal1);
 
     DebugP_log("EPWM Action Qualifier Module Test Passed!!\r\n");
-    DebugP_log("All Tests have Passed!!");
+    DebugP_log("All epwm Tests have Passed!!\n");
 
     Board_driversClose();
     Drivers_close();

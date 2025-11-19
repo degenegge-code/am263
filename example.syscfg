@@ -14,6 +14,8 @@ const ecap1           = ecap.addInstance();
 const epwm            = scripting.addModule("/drivers/epwm/epwm");
 const epwm1           = epwm.addInstance();
 const epwm2           = epwm.addInstance();
+const gpio            = scripting.addModule("/drivers/gpio/gpio", {}, false);
+const gpio1           = gpio.addInstance();
 const debug_log       = scripting.addModule("/kernel/dpl/debug_log");
 const dpl_cfg         = scripting.addModule("/kernel/dpl/dpl_cfg");
 const mpu_armv7       = scripting.addModule("/kernel/dpl/mpu_armv7", {}, false);
@@ -42,10 +44,11 @@ const section9        = section.addInstance();
 const section10       = section.addInstance();
 const section11       = section.addInstance();
 const section12       = section.addInstance();
+const input_xbar      = scripting.addModule("/xbar/input_xbar/input_xbar", {}, false);
+const input_xbar1     = input_xbar.addInstance();
 const int_xbar        = scripting.addModule("/xbar/int_xbar/int_xbar", {}, false);
 const int_xbar1       = int_xbar.addInstance();
 const int_xbar2       = int_xbar.addInstance();
-const int_xbar3       = int_xbar.addInstance();
 
 /**
  * Write custom configuration values to the imported modules.
@@ -53,6 +56,7 @@ const int_xbar3       = int_xbar.addInstance();
 ecap1.$name               = "CONFIG_ECAP0";
 ecap1.useInterrupts       = false;
 ecap1.counterResetOnEvent = ["ECAP_EVENT_2"];
+ecap1.ecapInput           = "ECAP_INPUT_INPUTXBAR0";
 
 epwm.enableWarning = true;
 epwm.enableInfo    = true;
@@ -97,6 +101,9 @@ epwm2.epwmTimebase_counterValue                                  = 100;
 epwm2.EPWM.$assign                                               = "EPWM1";
 epwm2.EPWM.A.$assign                                             = "EPWM1_A";
 epwm2.EPWM.B.$assign                                             = "EPWM1_B";
+
+gpio1.$name          = "CONFIG_GPIO0";
+gpio1.GPIO_n.$assign = "PR0_PRU0_GPIO0";
 
 const soc_ctrl_adc    = scripting.addModule("/drivers/soc_ctrl/v0/subModules/soc_ctrl_adc", {}, false);
 const soc_ctrl_adc1   = soc_ctrl_adc.addInstance({}, false);
@@ -353,13 +360,12 @@ section12.output_section.create(1);
 section12.output_section[0].$name     = ".bss.sipc_secure_host_queue_mem";
 section12.output_section[0].alignment = 0;
 
+input_xbar1.$name      = "CONFIG_INPUT_XBAR0";
+input_xbar1.xbarOutput = "GPIO93";
+
 int_xbar1.$name      = "CONFIG_INT_XBAR0";
 int_xbar1.xbarOutput = ["EPWM0_INT"];
 
 int_xbar2.$name      = "CONFIG_INT_XBAR1";
 int_xbar2.xbarOutput = ["EPWM1_INT"];
 int_xbar2.instance   = "INT_XBAR_1";
-
-int_xbar3.$name      = "CONFIG_INT_XBAR2";
-int_xbar3.xbarOutput = ["EPWM2_INT"];
-int_xbar3.instance   = "INT_XBAR_2";

@@ -7,6 +7,7 @@ TOTO NELZE:
 -  Ověření funkce COMP C a COMP D. Nový CPU má dva komparační registry navíc. Jako test bych navrhoval jen předělat předchozí případ, kdy místo A a B použijeme C a D.
 
 TODO:
+- ECAP_CLK_HZ
 - Připojíme převodník na eCAP jednotku procesoru. Chceme realizovat nastavení eCAP jednotky tak, bude kontinuálně „sama“ měřit frekvenci a CPU, pokud bude chtít, tak se zcela asynchronně podívá kamsi do registru a přečte si aktuální frekvenci. Cílem je nulové využití CPU pro měření(žádné INT rutiny).
 
 
@@ -14,4 +15,7 @@ wtfs:
 [33]ModuleNotFoundError: No module named 'cryptography'
 [34]gmake[3]: *** [makefile_ccs_bootimage_gen:97: all] Error 1
 [35]gmake[2]: [makefile:169: post-build] Error 2 (ignored)
+
+najednou mam stídu 50%, ale spoň zustalo 20us T
+a už je to zas na čtvrtině se poseru  (jen jsem vypnul drivers open redundant)
 
