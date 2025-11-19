@@ -11,7 +11,7 @@ void ecap_poll_main(void *args);        //ecapture běh
 uint16_t ecap_poll_close(void);         //konec ecapu
 uint16_t ecap_poll_init(void);          //zacatek ecapu
 
-
+//hypoteza s tim, že mam moc rychlej polling je asi mylná, nefunguje to stejně i s 100ms ibez smyčky atd
 
 int main(void)
 {
@@ -25,11 +25,11 @@ int main(void)
 
     DebugP_log("running to infinity\n");
 
-    //vezmu si jen desetisekundový okno
-    for (uint16_t i=0; i<1000; i++)
+    //vezmu si jen cca jedenáctisekundový okno
+    for (uint16_t i=0; i<100; i++)
     {
         ecap_poll_main(NULL);
-        ClockP_usleep(10000);  // 10 ms
+        ClockP_usleep(111111);  // 111 ms
     }
 
     epwm_updown_close();

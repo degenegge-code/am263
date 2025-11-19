@@ -16,6 +16,4 @@ wtfs:
 [34]gmake[3]: *** [makefile_ccs_bootimage_gen:97: all] Error 1
 [35]gmake[2]: [makefile:169: post-build] Error 2 (ignored)
 
-najednou mam stídu 50%, ale spoň zustalo 20us T
-a už je to zas na čtvrtině se poseru  (jen jsem vypnul drivers open redundant)
 
