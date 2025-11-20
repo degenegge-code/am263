@@ -1,4 +1,7 @@
-
+/*
+ * pomocí přivedení pulsů z epwm0 simuluju výstup převodníku u / f
+ * pomocí ecapu vypočítám frekvenci
+ */
 
 #include <stdint.h>
 #include <stdio.h>
@@ -15,12 +18,10 @@
 //proměnné:
 
 uint32_t gEcapBaseAddr = CONFIG_ECAP0_BASE_ADDR;
-volatile uint16_t cap2 = 0;
-volatile uint16_t cap3 = 0;
+volatile uint16_t cap2ircirc = 0;
+volatile uint16_t cap3ircirc = 0;
 
 //prototypy:
-static float computeFrequency(uint64_t periodTicks);
-static float computePeriodms(uint64_t periodTicks);
 uint32_t ecap_poll_prd_ns(void);
 
 //ostaní v mainu
@@ -50,9 +51,9 @@ void ecap_poll_close(void)
 
 uint32_t ecap_poll_prd_ns(void)
 {
-    cap2 = ECAP_getEventTimeStamp(gEcapBaseAddr, ECAP_EVENT_2);
-    cap3 = ECAP_getEventTimeStamp(gEcapBaseAddr, ECAP_EVENT_3);
-    return  ((cap2+cap3)*ECAP_CLK_NS);
+    cap2ircirc = ECAP_getEventTimeStamp(gEcapBaseAddr, ECAP_EVENT_2);
+    cap3ircirc = ECAP_getEventTimeStamp(gEcapBaseAddr, ECAP_EVENT_3);
+    return  ((cap2ircirc+cap3ircirc)*ECAP_CLK_NS);
 }
 
 float ecap_poll_f_hz(void)

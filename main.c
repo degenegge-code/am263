@@ -7,23 +7,22 @@
 #include "ti_board_open_close.h"
 
 // prototypyzde 
-//struktura podle examplu na jednu updown pwm
 void epwm_updown(void *args);
 void epwm_updown_close(void);           //konec epwm mainu
 uint16_t ecap_poll_close(void);         //konec ecapu
 uint16_t ecap_poll_init(void);          //zacatek ecapu
-
-float ecap_poll_f_hz(void);
+uint16_t ecap_pollirc_close(void);         //konec ecapu
+uint16_t ecap_pollirc_init(void);          //zacatek ecapu
+float ecap_pollirc_fhz(void);             //vypocet frekvence
 
 
 int main(void)
 {
     System_init();
-    DebugP_log("sys inited\n");
+    DebugP_log("sys inited\n"); //why do you work nigga?
     Board_init();
 
-    //open drivers for console, uart
-    Drivers_open();
+    Drivers_open();    //open drivers for console, uart, init board
     Board_driversOpen();
 
     DebugP_log("board inited\n");
@@ -32,12 +31,13 @@ int main(void)
 
     DebugP_log("running to infinity\n");
 
-    ecap_poll_init();
+    ecap_pollirc_init();
+
     ClockP_sleep(2);
-    float f=ecap_poll_f_hz();
+    float f=ecap_pollirc_fhz();
     ClockP_sleep(2);
 
-    ecap_poll_close();
+    ecap_pollirc_close();
 
     epwm_updown_close();
 
