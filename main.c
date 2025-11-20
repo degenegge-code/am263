@@ -10,10 +10,8 @@
 //struktura podle examplu na jednu updown pwm
 void epwm_updown(void *args);
 void epwm_updown_close(void);           //konec epwm mainu
-void ecap_poll_main(void *args);        //ecapture běh
 uint16_t ecap_poll_close(void);         //konec ecapu
 uint16_t ecap_poll_init(void);          //zacatek ecapu
-void ecap_try4_main(void *args);        //zkousim r f r f  
 
 float ecap_poll_f_hz(void);
 
@@ -58,11 +56,8 @@ int main(void)
 
 
 /*
- * takže tyvole
  * mam epwemku -> vezmu, na jakym je ballu (např G1) -> zjistim, jaký gpio tomu odpovídá (např GPIO61) -> tohle gpio narvu do Input Xbar (do jeho outputu)
  * tadyten XbarInput (např input xbar 0) narvu do eCapu A TO JE VŠE, nekonfiguruju gpio nebo něco takováho
- * 
- * pro epwm0 chciu ball B1, B2 -> gpio 44 a 43 -> CONFIG_INPUT_XBAR0 -> Capture input is InputXBar Output 0 ->TAK PROČ KURVA NEFUNGUJEŠ
- * 
+
  * čím se to spravilo? težko říct, blbš jsem měl přepočty, ale po importu examplu s isr to začlo fungovat
  */
