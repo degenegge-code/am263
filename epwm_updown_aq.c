@@ -57,10 +57,6 @@ void epwm_updown(void *args)
     HwiP_Params  hwiPrms_0;     //initialize interrupt parameters
     HwiP_Params  hwiPrms_1;     //initialize interrupt parameters
 
-    //open drivers for console, uart
-    Drivers_open();
-    Board_driversOpen();
-
     uint32_t epwmsMask = (1U << 0U) | (1U << 1U) ;      //nastav masku pro první dvě epwemky
                                                         // Check the syscfg for configurations !!!
 
@@ -116,8 +112,6 @@ void epwm_updown_close(void)
     DebugP_log("EPWM Action Qualifier Module Test Passed!!\r\n");
     DebugP_log("All epwm Tests have Passed!!\n");
 
-    Board_driversClose();
-    Drivers_close();
 }
 
 //interrupt service rutina - vezmi cmpam hodnoty, narvi je do vypisu, vyčisti přerušení

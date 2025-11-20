@@ -1,28 +1,4 @@
-/*
- * ECAP Capture Mode - example part
- * ----------------
- *    ECAP runs at 200 MHz and timestamps the edges (rising and/or falling) into 4 Capture registers
- * This example reads a PWM wave and determines its frequency and duty cycle.
- * Configuring the input via GPI and InputXbar into the ECAP for
- *     Falling, Rising, Falling, Rising
- * INPUT :
- *                 _________           _________           _________
- *                 |       |           |       |           |
- *         ________|       |___________|       |___________|
- *                         ^           ^       ^           ^
- * EDGE EVENT :            1.F         2.R     3.F         4.R
- * DATA :          <--NA--><-OFF time-><--ON--><-OFF time->
- * ECAP will be configured to reset counter on each edge recieved, and capture for one shot.
- * So the timestamp registers hold the data as follows
- *     2. OFF time
- *     3. ON time
- *     4. OFF time
- *
- *
- * Capture input is InputXBar Output 1
- * generuju pwmku na jeden pin a beru ten samý pin jako vstup pro ecap
- * 
-*/
+
 
 #include <stdint.h>
 #include <stdio.h>
@@ -37,34 +13,89 @@
 #include "ti_board_open_close.h"
 #include <drivers/gpio.h>
 
-#define ECAP_CLK_HZ    (25000000.0f)    // set to actual ECAP timer clock (verify in SysConfig/TRM)
-//vzal jsem to nakonec z syscfg z clocku Input Clock Frequency (Hz) 
+#define ECAP_CLK_HZ    (200000000.0f)    // set to actual ECAP timer clock (verify in SysConfig/TRM)
+#define ECAP_CLK_NS    (uint16_t)(1000000000.f/ECAP_CLK_HZ)
 
 //proměnné:
 volatile float dbgF;
 volatile uint32_t dbgT;
 volatile uint16_t duty_int;
+volatile float T1, T2, T3, T4;
+volatile uint32_t f2, f4;
+uint32_t gEcapBaseAddr = CONFIG_ECAP0_BASE_ADDR;
+
 
 //prototypy:
 static float computeFrequency(uint64_t periodTicks);
+static float computePeriodms(uint64_t periodTicks);
+uint32_t ecap_poll_prd_ns(void);
+
 //ostaní v mainu
 
 
-void ecap_poll_main(void *args)    //hlavnísymčka – nulová obsluha CPU 
+void ecap_risefall_main(void *args)        //pro cap1 na rising a cap2 na falling by mii to  mělo hodit střídu 25%, přičemž reset je na cap1 (v cap1 je perioda. v cap2 puls)
 {
     uint32_t cap1 = ECAP_getEventTimeStamp(CONFIG_ECAP0_BASE_ADDR, ECAP_EVENT_1);
     uint32_t cap2 = ECAP_getEventTimeStamp(CONFIG_ECAP0_BASE_ADDR, ECAP_EVENT_2);
 
-
-    //pro cap1 na rising a cap2 na falling by mii to  mělo hodit střídu 25%, přičemž reset je na cap1 (v cap1 je perioda. v cap2 puls)
     float duty = 100* (float)cap1 / (float)cap2;
     duty_int = (uint16_t)duty;
 
-    //if 
     // for debug only!!! — avoid costly prints in tight loop
-    // DebugP_log("f=%.2f Hz, duty=%.1f%% (cap2=%u cap3=%u)\r\n", freq, duty, cap2, cap1);
+    // DebugP_log("f=%.2f Hz, duty=%.1f%% (cap2=%u cap3=%u)\r\n", freq, duty, cap2, cap1);  
+}
 
-    
+/*
+ * nastAVENO fall rise fall rise, reset on 4, tzn cap1 - puls, cap2 - perioda, cap3 - perioda, cap4 - puls (nnebo možná místo period zbytky period)
+ * počitám periody a pulsy, jejich delky
+ *
+ */ 
+void ecap_try4_main(void *args)   
+{
+    uint32_t cap1 = ECAP_getEventTimeStamp(CONFIG_ECAP0_BASE_ADDR, ECAP_EVENT_1);
+    T1 = computePeriodms(cap1);
+
+    uint32_t cap2 = ECAP_getEventTimeStamp(CONFIG_ECAP0_BASE_ADDR, ECAP_EVENT_2);
+    f2 = computeFrequency(cap2);
+    T2 = computePeriodms(cap2);
+
+    uint32_t cap3 = ECAP_getEventTimeStamp(CONFIG_ECAP0_BASE_ADDR, ECAP_EVENT_3);
+    T3 = computePeriodms(cap3);
+
+    uint32_t cap4 = ECAP_getEventTimeStamp(CONFIG_ECAP0_BASE_ADDR, ECAP_EVENT_4);
+    T4 = computePeriodms(cap4);
+    f4 = computeFrequency(cap4);
+}
+
+
+volatile uint16_t cap2 = 0;
+volatile uint16_t cap3 = 0;
+/*
+ * Init všeho, co projekt a SysConfig vytvořil, all něco mam uřž v tom mainu, tak to tu není. 
+ * Pozn.: ECAP je už zkonfigurován SysConfigem – zde pouze časovač a capture engine spuštěnáí
+ */
+void ecap_poll_init(void)
+{
+    DebugP_log("ecap_poll_init \r\n");
+    ECAP_reArm(gEcapBaseAddr);
+}
+
+void ecap_poll_close(void)
+{
+    ECAP_stopCounter(CONFIG_ECAP0_BASE_ADDR);
+    DebugP_log("ecap_poll_close \r\n");
+}
+
+uint32_t ecap_poll_prd_ns(void)
+{
+    cap2 = ECAP_getEventTimeStamp(gEcapBaseAddr, ECAP_EVENT_2);
+    cap3 = ECAP_getEventTimeStamp(gEcapBaseAddr, ECAP_EVENT_3);
+    return  ((cap2+cap3)*ECAP_CLK_NS);
+}
+
+float ecap_poll_f_hz(void)
+{
+    return 1e9 / (float)ecap_poll_prd_ns();
 }
 
 
@@ -80,31 +111,15 @@ static float computeFrequency(uint64_t periodTicks)
     return (ECAP_CLK_HZ / (float)periodTicks);
 }
 
-/*
- * Init všeho, co projekt a SysConfig vytvořil, all něco mam uřž v tom mainu, tak to tu není. 
- * Pozn.: ECAP je už zkonfigurován SysConfigem – zde pouze časovač a capture engine spuštěnáí
- */
-void ecap_poll_init(void)
+static float computePeriodms(uint64_t periodTicks)
 {
-    ECAP_startCounter(CONFIG_ECAP0_BASE_ADDR);
-    ECAP_enableCaptureMode(CONFIG_ECAP0_BASE_ADDR);    // enable capture jednotky
-
-    DebugP_log("ecap inited\n");
-
+    if (periodTicks == 0ULL)
+    {
+        DebugP_log("hazim ti nulu z compute T");
+        return 0.0f;
+    }
+    return (1000.f / ((float)periodTicks / ECAP_CLK_HZ));
 }
-
-uint16_t ecap_poll_close(void)
-{
-    DebugP_log("ecap_poll_close: duty %u \n", duty_int); 
-    //DebugP_log("ecap_poll_close: f = %.2f Hz (ticks=%u)\r\n", dbgF, dbgT); // vypis toho f a ticku
-    //formalitky
-    Drivers_close();
-    System_deinit();
-    DebugP_log("ecap closed\n");
-
-    return 0;
-}
-
 
 /*
  * Emulation Mode se týká chování periferie (v tomto případě eCAP modulu), když je k procesoru připojen debugger (např. přes JTAG) a procesor narazí na breakpoint

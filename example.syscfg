@@ -14,8 +14,6 @@ const ecap1           = ecap.addInstance();
 const epwm            = scripting.addModule("/drivers/epwm/epwm");
 const epwm1           = epwm.addInstance();
 const epwm2           = epwm.addInstance();
-const gpio            = scripting.addModule("/drivers/gpio/gpio", {}, false);
-const gpio1           = gpio.addInstance();
 const debug_log       = scripting.addModule("/kernel/dpl/debug_log");
 const dpl_cfg         = scripting.addModule("/kernel/dpl/dpl_cfg");
 const mpu_armv7       = scripting.addModule("/kernel/dpl/mpu_armv7", {}, false);
@@ -48,7 +46,6 @@ const input_xbar      = scripting.addModule("/xbar/input_xbar/input_xbar", {}, f
 const input_xbar1     = input_xbar.addInstance();
 const int_xbar        = scripting.addModule("/xbar/int_xbar/int_xbar", {}, false);
 const int_xbar1       = int_xbar.addInstance();
-const int_xbar2       = int_xbar.addInstance();
 
 /**
  * Write custom configuration values to the imported modules.
@@ -59,8 +56,11 @@ ecap1.useInterrupts       = false;
 ecap1.dmaSource           = "ECAP_CAP_MODE_DMA_TRIGGER_SRC_CEVT2";
 ecap1.eventStop           = "ECAP_EVENT_4";
 ecap1.syncOutMode         = "ECAP_SYNC_OUT_DISABLED";
-ecap1.counterResetOnEvent = ["ECAP_EVENT_2"];
-ecap1.eventTwoPolarity    = "ECAP_EVNT_FALLING_EDGE";
+ecap1.eventOnePolarity    = "ECAP_EVNT_FALLING_EDGE";
+ecap1.eventThreePolarity  = "ECAP_EVNT_FALLING_EDGE";
+ecap1.resetCounters       = true;
+ecap1.counterResetOnEvent = ["ECAP_EVENT_1","ECAP_EVENT_2","ECAP_EVENT_3","ECAP_EVENT_4"];
+ecap1.reArm               = true;
 
 epwm.enableWarning = true;
 epwm.enableInfo    = true;
@@ -105,10 +105,6 @@ epwm2.epwmTimebase_counterValue                                  = 100;
 epwm2.EPWM.$assign                                               = "EPWM1";
 epwm2.EPWM.A.$assign                                             = "EPWM1_A";
 epwm2.EPWM.B.$assign                                             = "EPWM1_B";
-
-gpio1.$name          = "CONFIG_GPIO0";
-gpio1.pinDir         = "OUTPUT";
-gpio1.GPIO_n.$assign = "OSPI0_CSn0";
 
 const soc_ctrl_adc    = scripting.addModule("/drivers/soc_ctrl/v0/subModules/soc_ctrl_adc", {}, false);
 const soc_ctrl_adc1   = soc_ctrl_adc.addInstance({}, false);
@@ -370,7 +366,3 @@ input_xbar1.xbarOutput = "GPIO43";
 
 int_xbar1.$name      = "CONFIG_INT_XBAR0";
 int_xbar1.xbarOutput = ["EPWM0_INT"];
-
-int_xbar2.$name      = "CONFIG_INT_XBAR1";
-int_xbar2.xbarOutput = ["EPWM1_INT"];
-int_xbar2.instance   = "INT_XBAR_1";
