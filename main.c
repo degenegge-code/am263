@@ -48,11 +48,3 @@ int main(void)
 
     return 0;
 }
-
-
-/*
- * mam epwemku -> vezmu, na jakym je ballu (např G1) -> zjistim, jaký gpio tomu odpovídá (např GPIO61) -> tohle gpio narvu do Input Xbar (do jeho outputu)
- * tadyten XbarInput (např input xbar 0) narvu do eCapu A TO JE VŠE, nekonfiguruju gpio nebo něco takováho
-
- * čím se to spravilo? težko říct, blbš jsem měl přepočty, ale po importu examplu s isr to začlo fungovat
- */

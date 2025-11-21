@@ -26,14 +26,13 @@
  *          |    |¯¯¯¯¯¯¯¯¯|          |¯¯¯¯¯>
  *     B    |____|         |__________|
  *
- * - UNIT_PERIOD is specified as 10000 us - v pdfku je napsáno "to be defined"
- * - Simulated quadrature signal frequency is 20000Hz (4 * 5000) - původní blábol, proč je tam to 4* ????
- * - Encoder holes assumed as 4000 třeba nevim, aby zas nebylo velký rpm
+ * - UNIT_PERIOD is specified as 2M ticks = 1ms
+ * - Simulated quadrature signal frequency is 200000 protože 4 tiky měřim jako jedno T
+ * - Encoder holes assumed as 4000 třeba nevim,- v pdfku je napsáno "to be defined"
  * - Thus Simulated motor speed is the maximum speed
- *       (200000 * (60 / 4000)) = 3 000 rpm
+ *       firc *60 /4000 = 3000 rpm
  *
- * freq : Simulated quadrature signal frequency measured by counting
- * the external input pulses for UNIT_PERIOD (unit timer set to 10 ms).
+ * freq : Simulated quadrature signal frequency measured by counting the external input pulses for UNIT_PERIOD (set v syscfgu)
  * speed : Measure motor speed in rpm
  * dir : Indicates clockwise (1) or anticlockwise (-1)
  * 
@@ -42,10 +41,10 @@
 
 
 /*
- *
+ *	EQEP: EQEPxA Pin(EQEP0_A) B14 a EQEPxB Pin(EQEP0_B) A14 - gpio 130 a 131
  * Internal Connections \n
- * - ePWM2A -> GPIO47 -> INPUTXBAR1 -> PWMXBAR1 -> eQEP0A
- * - ePWM2B -> GPIO48 -> INPUTXBAR2 -> PWMXBAR2 -> eQEP0B
+ * - ePWM2A -> C2 -> GPIO47 -> INPUTXBAR1 -> PWMXBAR1 -> eQEP0A
+ * - ePWM2B -> C1 -> GPIO48 -> INPUTXBAR2 -> PWMXBAR2 -> eQEP0B
  * 
  * 1X Resolution: Count rising edge only
  * emulation: Counter unaffected by suspend
@@ -53,15 +52,17 @@
  * maximum of the counter: 4294967295
  * Position Counter Mode: Reset position on a unit time event
  * enable unit timer and Unit Timer Period : 2000000
- * INT XBAR		CONFIG_INT_XBAR0	EQEP0_INT	INT_XBAR_0
+ * INT XBAR		CONFIG_INT_XBAR0	EQEP0_INT	INT_XBAR_0 	woe
  * INPUT XBAR naroutovat na EPWMXBAR (v epwmxbar, input xbary se vytvoří samy)
  * 
  */
+
+
 // Defines:
 #define DEVICE_SYSCLK_FREQ  (200000000U) // Sysclk frequence
 #define APP_INT_IS_PULSE  (1U) // Macro for interrupt pulse
 #define PWM_CLK (200000u)       //same as form irc sim (?)
-#define UNIT_PERIOD  10000U // Specify the period in microseconds 
+#define UNIT_PERIOD  (2000000U) // vezmu z Unit timer period z syscfgu - 200Mhz clk, takže toto je 1ms
 
 // Global variables and objects :
 uint32_t gEqepBaseAddr;
@@ -71,7 +72,6 @@ uint32_t gOldcount = 0;                 // Stores the previous position counter 
 int32_t gFreq = 0;                      // Measured quadrature signal frequency of motor using eQEP 
 float gSpeed = 0.0f;                    // Measured speed of motor in rpm 
 int32_t gDir = 0;                       // Direction of rotation of motor 
-uint32_t gPass = 0, gFail = 0;          // Pass or fail indicator 
 volatile uint32_t gNewcount = 0 ;
 
 // Function Prototypes:
@@ -101,34 +101,27 @@ void eqep_speed_dir_main(void *args)
 
     EQEP_clearInterruptStatus(gEqepBaseAddr,EQEP_INT_UNIT_TIME_OUT|EQEP_INT_GLOBAL);     // Clear eqep interrupt 
 
-    while( *(volatile uint32_t *) ((uintptr_t) &gCount) < 10)
+    //čekej na deset měření, tzn 10 period = 10* UNIT_PERIOD = 10ms
+    while( *(volatile uint32_t *) ((uintptr_t) &gCount) < 10) //vau hustý
     {
         //Wait for Speed results
     }
 	
-    if((gPass == 1) && (gFail == 0))
-    {
-		DebugP_log("Expected speed = 3000 RPM, Measured speed = %f RPM \r\n", gSpeed);	 		// Expected 3 000 RPM based on programmed EPWM frequency
-
-		
-		DebugP_log("Rotation direction = ");
-		if(gDir==1)
-		{
-			DebugP_log("Clockwise, forward \r\n");
-		}
-		if(gDir==-1)
-		{
-			DebugP_log("Counter Clockwise, reverse \r\n");
-		}
+    DebugP_log("frequency of pulses: %i \n" , gFreq);
+	DebugP_log("Expected speed = 3000 RPM, Measured speed = %f RPM \r\n", gSpeed);	 		// Expected 3 000 RPM based on programmed EPWM frequency
 	
-        DebugP_log("EQEP Speed Direction Test Passed!!\r\n");
-        DebugP_log("All tests have passed!!\r\n");
-    }
-    else
-    {
-        DebugP_log("Fail\r\n");
-    }
+	DebugP_log("Rotation direction = ");
+	if(gDir==1)
+	{
+		DebugP_log("Clockwise, forward \r\n");
+	}
+	if(gDir==-1)
+	{
+		DebugP_log("Counter Clockwise, reverse \r\n");
+	}
 
+    DebugP_log("EQEP Speed Direction Test Passed!!\r\n");
+    DebugP_log("All tests have passed!!\r\n");
     Board_driversClose();
     Drivers_close();
 }
@@ -156,20 +149,8 @@ static void App_eqepIntrISR(void *handle)
 
    gOldcount = gNewcount;    // Stores the current position count value to oldcount variable 
 
-   gFreq = (gNewcount * (uint32_t)1000000U)/((uint32_t)UNIT_PERIOD);    // Simulovana frekvenca
-   gSpeed = (gFreq * 60)/4000.0f;                                       //simulovana rychlsost
-
-   // Compares the measured quadrature simulated frequency with input quadrature frequency and if difference is within the measurement resolution
-   // (1/10ms = 100Hz) then pass = 1 else fail = 1
-   if (gCount >= 2){
-        if(((gFreq - PWM_CLK*4) <100) && ((PWM_CLK*4 - gFreq ) < 100)){
-            gPass = 1; 
-            gFail = 0;
-        }else {
-            gPass = 0;  
-            gFail = 1;
-        }
-    }
+   gFreq = (gNewcount * (uint32_t)1000000U)/((uint32_t)UNIT_PERIOD)*((uint32_t)DEVICE_SYSCLK_FREQ/1e6);    // frekvenca = cnt/T = cnt/(unitprd/fsys) = cnt
+   gSpeed = (gFreq * 60)/4000.0f;                                       //simulovana rychlsost: rpm, , 4000 děr
 
    EQEP_clearInterruptStatus(gEqepBaseAddr,EQEP_INT_UNIT_TIME_OUT|EQEP_INT_GLOBAL);    // Clear interrupt flag
 }

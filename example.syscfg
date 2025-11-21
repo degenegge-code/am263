@@ -137,6 +137,7 @@ eqep1.enableUnitTimer      = true;
 eqep1.interruptSources     = ["EQEP_INT_UNIT_TIME_OUT"];
 eqep1.EQEP.$assign         = "EQEP0";
 eqep1.EQEP.A.$assign       = "EQEP0_A";
+eqep1.EQEP.B.$assign       = "EQEP0_B";
 
 const soc_ctrl_adc    = scripting.addModule("/drivers/soc_ctrl/v0/subModules/soc_ctrl_adc", {}, false);
 const soc_ctrl_adc1   = soc_ctrl_adc.addInstance({}, false);
@@ -393,23 +394,23 @@ section12.output_section.create(1);
 section12.output_section[0].$name     = ".bss.sipc_secure_host_queue_mem";
 section12.output_section[0].alignment = 0;
 
-epwm_xbar1.xbarOutput               = ["GPIO47"];
 epwm_xbar1.instance                 = "EPWM_XBAR_1";
 epwm_xbar1.$name                    = "CONFIG_EPWM_XBAR1";
-epwm_xbar1["xbarConfig-0"].instance = "INPUT_XBAR_1";
+epwm_xbar1.xbarOutput               = ["GPIO47"];
 epwm_xbar1["xbarConfig-0"].$name    = "CONFIG_INPUT_XBAR1";
+epwm_xbar1["xbarConfig-0"].instance = "INPUT_XBAR_1";
 
 epwm_xbar2.instance                 = "EPWM_XBAR_2";
 epwm_xbar2.$name                    = "CONFIG_EPWM_XBAR2";
 epwm_xbar2.xbarOutput               = ["GPIO48"];
-epwm_xbar2["xbarConfig-0"].instance = "INPUT_XBAR_2";
 epwm_xbar2["xbarConfig-0"].$name    = "CONFIG_INPUT_XBAR2";
+epwm_xbar2["xbarConfig-0"].instance = "INPUT_XBAR_2";
 
 input_xbar1.$name      = "CONFIG_INPUT_XBAR0";
 input_xbar1.xbarOutput = "GPIO43";
 
+int_xbar1.xbarOutput = ["EQEP0_INT"];
 int_xbar1.$name      = "CONFIG_INT_XBAR0";
-int_xbar1.xbarOutput = ["EPWM0_INT"];
 
 /**
  * Pinmux solution for unlocked pins/peripherals. This ensures that minor changes to the automatic solver in a future
@@ -418,6 +419,5 @@ int_xbar1.xbarOutput = ["EPWM0_INT"];
  */
 epwm3.EPWM.A.$suggestSolution      = "EPWM2_A";
 epwm3.EPWM.B.$suggestSolution      = "EPWM2_B";
-eqep1.EQEP.B.$suggestSolution      = "EQEP0_B";
 eqep1.EQEP.STROBE.$suggestSolution = "EQEP0_STROBE";
 eqep1.EQEP.INDEX.$suggestSolution  = "EQEP0_INDEX";
