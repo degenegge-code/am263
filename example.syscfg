@@ -15,6 +15,8 @@ const epwm            = scripting.addModule("/drivers/epwm/epwm");
 const epwm1           = epwm.addInstance();
 const epwm2           = epwm.addInstance();
 const epwm3           = epwm.addInstance();
+const eqep            = scripting.addModule("/drivers/eqep/eqep", {}, false);
+const eqep1           = eqep.addInstance();
 const debug_log       = scripting.addModule("/kernel/dpl/debug_log");
 const dpl_cfg         = scripting.addModule("/kernel/dpl/dpl_cfg");
 const mpu_armv7       = scripting.addModule("/kernel/dpl/mpu_armv7", {}, false);
@@ -43,6 +45,9 @@ const section9        = section.addInstance();
 const section10       = section.addInstance();
 const section11       = section.addInstance();
 const section12       = section.addInstance();
+const epwm_xbar       = scripting.addModule("/xbar/epwm_xbar/epwm_xbar", {}, false);
+const epwm_xbar1      = epwm_xbar.addInstance();
+const epwm_xbar2      = epwm_xbar.addInstance();
 const input_xbar      = scripting.addModule("/xbar/input_xbar/input_xbar", {}, false);
 const input_xbar1     = input_xbar.addInstance();
 const int_xbar        = scripting.addModule("/xbar/int_xbar/int_xbar", {}, false);
@@ -114,6 +119,24 @@ epwm3.epwmCounterCompare_cmpBGld               = true;
 epwm3.epwmActionQualifier_EPWM_AQ_OUTPUT_A_gld = true;
 epwm3.epwmActionQualifier_EPWM_AQ_OUTPUT_B_gld = true;
 epwm3.EPWM.$assign                             = "EPWM2";
+
+eqep1.$name                = "CONFIG_EQEP0";
+eqep1.enableInterrupt      = true;
+eqep1.selectSourceB        = "EQEP_SOURCE_PWMXBAROUT2";
+eqep1.selectSourceA        = "EQEP_SOURCE_PWMXBAROUT1";
+eqep1.emulationMode        = "EQEP_EMULATIONMODE_RUNFREE";
+eqep1.selectSourceIndex    = "EQEP_SOURCE_DEVICE_PIN";
+eqep1.eqepResolution       = "EQEP_CONFIG_1X_RESOLUTION";
+eqep1.positionCounterMax   = 4294967295;
+eqep1.latchPositionCounter = "EQEP_LATCH_UNIT_TIME_OUT";
+eqep1.swPositionInit       = true;
+eqep1.enableModule         = true;
+eqep1.positionCounterMode  = "EQEP_POSITION_RESET_UNIT_TIME_OUT";
+eqep1.unitTimerPeriod      = 2000000;
+eqep1.enableUnitTimer      = true;
+eqep1.interruptSources     = ["EQEP_INT_UNIT_TIME_OUT"];
+eqep1.EQEP.$assign         = "EQEP0";
+eqep1.EQEP.A.$assign       = "EQEP0_A";
 
 const soc_ctrl_adc    = scripting.addModule("/drivers/soc_ctrl/v0/subModules/soc_ctrl_adc", {}, false);
 const soc_ctrl_adc1   = soc_ctrl_adc.addInstance({}, false);
@@ -370,6 +393,18 @@ section12.output_section.create(1);
 section12.output_section[0].$name     = ".bss.sipc_secure_host_queue_mem";
 section12.output_section[0].alignment = 0;
 
+epwm_xbar1.xbarOutput               = ["GPIO47"];
+epwm_xbar1.instance                 = "EPWM_XBAR_1";
+epwm_xbar1.$name                    = "CONFIG_EPWM_XBAR1";
+epwm_xbar1["xbarConfig-0"].instance = "INPUT_XBAR_1";
+epwm_xbar1["xbarConfig-0"].$name    = "CONFIG_INPUT_XBAR1";
+
+epwm_xbar2.instance                 = "EPWM_XBAR_2";
+epwm_xbar2.$name                    = "CONFIG_EPWM_XBAR2";
+epwm_xbar2.xbarOutput               = ["GPIO48"];
+epwm_xbar2["xbarConfig-0"].instance = "INPUT_XBAR_2";
+epwm_xbar2["xbarConfig-0"].$name    = "CONFIG_INPUT_XBAR2";
+
 input_xbar1.$name      = "CONFIG_INPUT_XBAR0";
 input_xbar1.xbarOutput = "GPIO43";
 
@@ -381,5 +416,8 @@ int_xbar1.xbarOutput = ["EPWM0_INT"];
  * version of the tool will not impact the pinmux you originally saw.  These lines can be completely deleted in order to
  * re-solve from scratch.
  */
-epwm3.EPWM.A.$suggestSolution = "EPWM2_A";
-epwm3.EPWM.B.$suggestSolution = "EPWM2_B";
+epwm3.EPWM.A.$suggestSolution      = "EPWM2_A";
+epwm3.EPWM.B.$suggestSolution      = "EPWM2_B";
+eqep1.EQEP.B.$suggestSolution      = "EQEP0_B";
+eqep1.EQEP.STROBE.$suggestSolution = "EQEP0_STROBE";
+eqep1.EQEP.INDEX.$suggestSolution  = "EQEP0_INDEX";

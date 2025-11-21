@@ -12,6 +12,7 @@ void epwm_updown_close(void);           //konec epwm mainu
 uint16_t ecap_poll_close(void);         //konec ecapu
 uint16_t ecap_poll_init(void);          //zacatek ecapu
 void irc_out_go(void);                  //irc, go!
+void eqep_speed_dir_main(void *args);    //eqep meri 
 
 
 int main(void)
@@ -27,13 +28,12 @@ int main(void)
     epwm_updown(NULL);
 
     irc_out_go();
-    
+
     DebugP_log("running to infinity\n");
 
-    while (1) 
-    {
-        ClockP_sleep(2);
-    }
+    ClockP_sleep(2);
+    eqep_speed_dir_main(NULL);
+    ClockP_sleep(2);
 
     epwm_updown_close();
 

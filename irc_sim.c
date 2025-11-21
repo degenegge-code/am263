@@ -58,7 +58,7 @@ uint32_t epwmInstance = 2;
 
 void irc_out_go(void)
 {
-    DebugP_log("irc_out_go");
+    DebugP_log("irc_out_go \n");
 
     
     SOC_setEpwmTbClk( epwmInstance, FALSE); //FIXME: tohle nic nedělá
