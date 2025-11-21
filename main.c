@@ -11,9 +11,7 @@ void epwm_updown(void *args);
 void epwm_updown_close(void);           //konec epwm mainu
 uint16_t ecap_poll_close(void);         //konec ecapu
 uint16_t ecap_poll_init(void);          //zacatek ecapu
-uint16_t ecap_pollirc_close(void);         //konec ecapu
-uint16_t ecap_pollirc_init(void);          //zacatek ecapu
-float ecap_pollirc_fhz(void);             //vypocet frekvence
+void irc_out_go(void);                  //irc, go!
 
 
 int main(void)
@@ -21,7 +19,6 @@ int main(void)
     System_init();
     DebugP_log("sys inited\n"); //why do you work nigga?
     Board_init();
-
     Drivers_open();    //open drivers for console, uart, init board
     Board_driversOpen();
 
@@ -29,23 +26,21 @@ int main(void)
 
     epwm_updown(NULL);
 
+    irc_out_go();
+    
     DebugP_log("running to infinity\n");
 
-    ecap_pollirc_init();
-
-    ClockP_sleep(2);
-    float f=ecap_pollirc_fhz();
-    ClockP_sleep(2);
-
-    ecap_pollirc_close();
+    while (1) 
+    {
+        ClockP_sleep(2);
+    }
 
     epwm_updown_close();
 
-    DebugP_log("freq:  %f \n", f);
+    //DebugP_log("freq:  %f \n", f);
 
     Board_driversClose();
     Drivers_close();
-
     Board_deinit();
     DebugP_log("board closed\n");
     System_deinit();

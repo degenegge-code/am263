@@ -14,6 +14,7 @@ const ecap1           = ecap.addInstance();
 const epwm            = scripting.addModule("/drivers/epwm/epwm");
 const epwm1           = epwm.addInstance();
 const epwm2           = epwm.addInstance();
+const epwm3           = epwm.addInstance();
 const debug_log       = scripting.addModule("/kernel/dpl/debug_log");
 const dpl_cfg         = scripting.addModule("/kernel/dpl/dpl_cfg");
 const mpu_armv7       = scripting.addModule("/kernel/dpl/mpu_armv7", {}, false);
@@ -105,6 +106,14 @@ epwm2.epwmTimebase_counterValue                                  = 100;
 epwm2.EPWM.$assign                                               = "EPWM1";
 epwm2.EPWM.A.$assign                                             = "EPWM1_A";
 epwm2.EPWM.B.$assign                                             = "EPWM1_B";
+
+epwm3.$name                                    = "CONFIG_EPWM2";
+epwm3.epwmTimebase_periodGld                   = true;
+epwm3.epwmCounterCompare_cmpAGld               = true;
+epwm3.epwmCounterCompare_cmpBGld               = true;
+epwm3.epwmActionQualifier_EPWM_AQ_OUTPUT_A_gld = true;
+epwm3.epwmActionQualifier_EPWM_AQ_OUTPUT_B_gld = true;
+epwm3.EPWM.$assign                             = "EPWM2";
 
 const soc_ctrl_adc    = scripting.addModule("/drivers/soc_ctrl/v0/subModules/soc_ctrl_adc", {}, false);
 const soc_ctrl_adc1   = soc_ctrl_adc.addInstance({}, false);
@@ -366,3 +375,11 @@ input_xbar1.xbarOutput = "GPIO43";
 
 int_xbar1.$name      = "CONFIG_INT_XBAR0";
 int_xbar1.xbarOutput = ["EPWM0_INT"];
+
+/**
+ * Pinmux solution for unlocked pins/peripherals. This ensures that minor changes to the automatic solver in a future
+ * version of the tool will not impact the pinmux you originally saw.  These lines can be completely deleted in order to
+ * re-solve from scratch.
+ */
+epwm3.EPWM.A.$suggestSolution = "EPWM2_A";
+epwm3.EPWM.B.$suggestSolution = "EPWM2_B";
