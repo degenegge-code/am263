@@ -132,9 +132,9 @@ eqep1.latchPositionCounter = "EQEP_LATCH_UNIT_TIME_OUT";
 eqep1.swPositionInit       = true;
 eqep1.enableModule         = true;
 eqep1.positionCounterMode  = "EQEP_POSITION_RESET_UNIT_TIME_OUT";
-eqep1.unitTimerPeriod      = 2000000;
 eqep1.enableUnitTimer      = true;
 eqep1.interruptSources     = ["EQEP_INT_UNIT_TIME_OUT"];
+eqep1.unitTimerPeriod      = 200000;
 eqep1.EQEP.$assign         = "EQEP0";
 eqep1.EQEP.A.$assign       = "EQEP0_A";
 eqep1.EQEP.B.$assign       = "EQEP0_B";
@@ -409,8 +409,8 @@ epwm_xbar2["xbarConfig-0"].instance = "INPUT_XBAR_2";
 input_xbar1.$name      = "CONFIG_INPUT_XBAR0";
 input_xbar1.xbarOutput = "GPIO43";
 
-int_xbar1.xbarOutput = ["EQEP0_INT"];
 int_xbar1.$name      = "CONFIG_INT_XBAR0";
+int_xbar1.xbarOutput = ["EQEP0_INT"];
 
 /**
  * Pinmux solution for unlocked pins/peripherals. This ensures that minor changes to the automatic solver in a future

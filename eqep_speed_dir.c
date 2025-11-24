@@ -1,4 +1,3 @@
-
 #include <kernel/dpl/DebugP.h>
 #include <kernel/dpl/SemaphoreP.h>
 #include <kernel/dpl/HwiP.h>
@@ -59,20 +58,20 @@
 
 
 // Defines:
-#define DEVICE_SYSCLK_FREQ  (200000000U) // Sysclk frequence
+#define DEVICE_SYSCLK_FREQ  (uint32_t)(2e8) // Sysclk frequence 2MHz
 #define APP_INT_IS_PULSE  (1U) // Macro for interrupt pulse
-#define PWM_CLK (200000u)       //same as form irc sim (?)
-#define UNIT_PERIOD  (2000000U) // vezmu z Unit timer period z syscfgu - 200Mhz clk, takže toto je 1ms
+#define UNIT_PERIOD  (uint32_t)(DEVICE_SYSCLK_FREQ / 1e3) // period timer value, at which timer-out interrupt is set, takže na 1ms: 2e8 / 1e3 = 2e5
+#define QUAD_TIC 4U //Quadrature-clock mode
 
 // Global variables and objects :
 uint32_t gEqepBaseAddr;
 static HwiP_Object gEqepHwiObject;
 uint32_t gCount = 0;                    // Counter to check measurement gets saturated
 uint32_t gOldcount = 0;                 // Stores the previous position counter value 
-int32_t gFreq = 0;                      // Measured quadrature signal frequency of motor using eQEP 
-float gSpeed = 0.0f;                    // Measured speed of motor in rpm 
+int32_t gFreq = 0;                     // Measured signal frequency (respecting quadrature mode) of motor using eQEP 
+volatile int32_t gSpeed = 0;                    // Measured speed of motor in rpm 
 int32_t gDir = 0;                       // Direction of rotation of motor 
-volatile uint32_t gNewcount = 0 ;
+volatile uint32_t gNewcount = 0 ;       // stores the actual position counter value
 
 // Function Prototypes:
 static void App_eqepIntrISR(void *handle);
@@ -99,6 +98,7 @@ void eqep_speed_dir_main(void *args)
     status              = HwiP_construct(&gEqepHwiObject, &hwiPrms);
     DebugP_assert(status == SystemP_SUCCESS);
 
+    EQEP_loadUnitTimer(gEqepBaseAddr, UNIT_PERIOD); //radši to sem hodim i mimo syscfg
     EQEP_clearInterruptStatus(gEqepBaseAddr,EQEP_INT_UNIT_TIME_OUT|EQEP_INT_GLOBAL);     // Clear eqep interrupt 
 
     //čekej na deset měření, tzn 10 period = 10* UNIT_PERIOD = 10ms
@@ -107,8 +107,10 @@ void eqep_speed_dir_main(void *args)
         //Wait for Speed results
     }
 	
-    DebugP_log("frequency of pulses: %i \n" , gFreq);
-	DebugP_log("Expected speed = 3000 RPM, Measured speed = %f RPM \r\n", gSpeed);	 		// Expected 3 000 RPM based on programmed EPWM frequency
+    DebugP_log("frequency of pulses: %i \r\n" , gFreq);
+
+    DebugP_log("Expected speed = 3000 RPM, Measured speed = %i RPM \r\n", gSpeed);
+
 	
 	DebugP_log("Rotation direction = ");
 	if(gDir==1)
@@ -127,8 +129,6 @@ void eqep_speed_dir_main(void *args)
 }
 
 
-
-// eqep0 ISR--interrupts once every 4 QCLK counts (one period) 
 static void App_eqepIntrISR(void *handle)
 {
     gCount++;     // Increment count value 
@@ -136,21 +136,28 @@ static void App_eqepIntrISR(void *handle)
 
     gDir = EQEP_getDirection(gEqepBaseAddr);    // Gets direction of rotation of motor 
 
-
-   /* Calculates the number of position in unit time based on
-      motor's direction of rotation */
-
    if (gDir > 0 ){
-        // Do vubec nic
+        // Forward direction: use gNewcount as-is
         }
    else {
+            // Reverse direction: convert to magnitude (dvojkovy doplněk)
             gNewcount = (0xFFFFFFFF - gNewcount) + 1;
         }
 
    gOldcount = gNewcount;    // Stores the current position count value to oldcount variable 
 
-   gFreq = (gNewcount * (uint32_t)1000000U)/((uint32_t)UNIT_PERIOD)*((uint32_t)DEVICE_SYSCLK_FREQ/1e6);    // frekvenca = cnt/T = cnt/(unitprd/fsys) = cnt
-   gSpeed = (gFreq * 60)/4000.0f;                                       //simulovana rychlsost: rpm, , 4000 děr
+   // gFreq Calculation:
+   // gNewcount = position pulses accumulated in UNIT_PERIOD (1 ms by default)
+   // UNIT_PERIOD = 2e5 ticks at 200 MHz sysclock = 1 ms
+   // gFreq [pulses/sec] = gNewcount [pulses/ms] * (1e3 ms/sec)
+   // Simplified: gFreq = gNewcount * 1000
+   gFreq = (int32_t)(gNewcount * 1000 / QUAD_TIC );
+   
+   // gSpeed Calculation:
+   // Motor has 4000 encoder holes (pulses per revolution)
+   // gFreq [pulses/sec] / 4000 [pulses/rev] = revolutions/sec
+   // (revolutions/sec) * 60 [sec/min] = RPM
+   gSpeed = (int32_t)((int64_t)gFreq  / (int64_t)(4000UL * 60UL / QUAD_TIC));
 
    EQEP_clearInterruptStatus(gEqepBaseAddr,EQEP_INT_UNIT_TIME_OUT|EQEP_INT_GLOBAL);    // Clear interrupt flag
 }
