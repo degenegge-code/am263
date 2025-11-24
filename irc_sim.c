@@ -21,24 +21,24 @@
  * trying everything through this only, WITHOUT syscfg
  */
  
-    /*NASTAVENÍ PWMKY TAKTO, ABY ODPOVÍDALA IRC ČIDLU
-     *  
-     * PRD      |    /\        /\        /\
-     *          |   /  \      /  \      /  \
-     * CMPB     |--x----x----x----x----x----x
-     *          | /      \  /      \  /      \
-     * ZERO     |/________\/________\/________\/>
-     *          |
-     *          |
-     *          |¯¯¯¯¯¯¯¯¯|          |¯¯¯¯¯¯¯¯¯|
-     * EPWMA    |         |__________|         |>
-     *          |
-     *          |
-     *          |    |¯¯¯¯¯¯¯¯¯|          |¯¯¯¯¯>
-     * EPWMB    |____|         |__________|
-     *
-     */
-
+/*NASTAVENÍ PWMKY TAKTO, ABY ODPOVÍDALA IRC ČIDLU
+ *  
+ * PRD      |    /\        /\        /\
+ *          |   /  \      /  \      /  \
+ * CMPB     |--x----x----x----x----x----x
+ *          | /      \  /      \  /      \
+ * ZERO     |/________\/________\/________\/>
+ *          |
+ *          |
+ *          |¯¯¯¯¯¯¯¯¯|          |¯¯¯¯¯¯¯¯¯|
+ * EPWMA    |         |__________|         |>
+ *          |
+ *          |
+ *          |    |¯¯¯¯¯¯¯¯¯|          |¯¯¯¯¯>
+ * EPWMB    |____|         |__________|
+ *
+ * toto by měl být směr forward
+ */
 
 // Defines 
 // Sysclk frequency 
@@ -61,7 +61,7 @@ void irc_out_go(void)
     DebugP_log("irc_out_go \n");
 
     
-    SOC_setEpwmTbClk( epwmInstance, FALSE); //FIXME: tohle nic nedělá
+    SOC_setEpwmTbClk( epwmInstance, FALSE); //FIXME: tohle nic nedělá, možná implicit
 
     EPWM_setClockPrescaler(gEpwmBaseAddr, 1, 1);
     EPWM_setTimeBasePeriod(gEpwmBaseAddr, PWM_PRD);

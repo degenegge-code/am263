@@ -64,7 +64,7 @@ float ecap_poll_f_hz(void)
 
 /*
  * Emulation Mode se týká chování periferie (v tomto případě eCAP modulu), když je k procesoru připojen debugger (např. přes JTAG) a procesor narazí na breakpoint
- * (bod přerušení) a zastaví se vykonávání kódu.
+ * a zastaví se vykonávání kódu.
  * TSCTR (Time-Stamp Counter) zastavuju při breakpointu
  * eCAP Capture Mode:
  * Když přijde signál, modul "zachytí" (zkopíruje) aktuální hodnotu běžícího čítače (TSCTR) do speciálního registru (CAP1, CAP2, atd.). (Time-Stamp)

@@ -7,14 +7,8 @@
 #include "ti_board_open_close.h"
 
 /*
- * NEFUNGUJE VÝPOČET RPM
  *  Speed and Direction Measurement Using eQEP
  * 
- * This example can be used to sense the speed and direction of motor
- * using eQEP in quadrature encoder mode.
- * EQEP unit timeout is set which will generate an interrupt every
- *  \b UNIT_PERIOD microseconds and speed calculation occurs continuously
- *  based on the direction of motor
  *
  * The configuration for this example is as follows:
  * irc information taken from ti-gel-2xxx-rotorpos-encoder-en-pre.pdf
@@ -26,21 +20,13 @@
  *          |    |¯¯¯¯¯¯¯¯¯|          |¯¯¯¯¯>
  *     B    |____|         |__________|
  *
- * - UNIT_PERIOD is specified as 2M ticks = 1ms
- * - Simulated quadrature signal frequency is 200000 protože 4 tiky měřim jako jedno T
+ * - UNIT_PERIOD is specified as 2e5 ticks = 1ms
+ * - Simulated quadrature signal frequency is 800000 protože 4 pulsy jsou jeden puls (quadrature mode)
  * - Encoder holes assumed as 4000 třeba nevim,- v pdfku je napsáno "to be defined"
- * - Thus Simulated motor speed is the maximum speed
- *       firc *60 /4000 = 3000 rpm
- *
- * freq : Simulated quadrature signal frequency measured by counting the external input pulses for UNIT_PERIOD (set v syscfgu)
- * speed : Measure motor speed in rpm
+
+ * freq : Simulated quadrature signal frequency measured by counting the external input pulses for UNIT_PERIOD (set v syscfgu) i zde
  * dir : Indicates clockwise (1) or anticlockwise (-1)
- * 
- * 
- */ 
-
-
-/*
+ *
  *	EQEP: EQEPxA Pin(EQEP0_A) B14 a EQEPxB Pin(EQEP0_B) A14 - gpio 130 a 131
  * Internal Connections \n
  * - ePWM2A -> C2 -> GPIO47 -> INPUTXBAR1 -> PWMXBAR1 -> eQEP0A
@@ -54,6 +40,9 @@
  * enable unit timer and Unit Timer Period : 2000000
  * INT XBAR		CONFIG_INT_XBAR0	EQEP0_INT	INT_XBAR_0 	woe
  * INPUT XBAR naroutovat na EPWMXBAR (v epwmxbar, input xbary se vytvoří samy)
+ * quadrature mode je tam implicitně
+ * 
+ * snad jsem nastavil směr správně, ještě zkontrolovat
  * 
  */
 
@@ -70,7 +59,6 @@ static HwiP_Object gEqepHwiObject;
 uint32_t gCount = 0;                    // Counter to check measurement gets saturated
 uint32_t gOldcount = 0;                 // Stores the previous position counter value 
 int32_t gFreq = 0;                     // Measured signal frequency (respecting quadrature mode) of motor using eQEP 
-volatile float gSpeed = 0;                    // Measured speed of motor in rpm 
 int32_t gDir = 0;                       // Direction of rotation of motor 
 volatile uint32_t gNewcount = 0 ;       // stores the actual position counter value
 
@@ -87,7 +75,6 @@ void eqep_speed_dir_main(void *args)
     HwiP_Params hwiPrms;
 
     DebugP_log("EQEP Speed Direction Test Started ...\r\n");
-	DebugP_log("Please wait few seconds ...\r\n");              //huh
 	
     gEqepBaseAddr = CONFIG_EQEP0_BASE_ADDR;
 
@@ -110,9 +97,6 @@ void eqep_speed_dir_main(void *args)
 	
     DebugP_log("frequency of pulses: %i \r\n" , gFreq);
 
-    DebugP_log("Expected speed = 3000 RPM, Measured speed = %f RPM \r\n", gSpeed);
-
-	
 	DebugP_log("Rotation direction = ");
 	if(gDir==1)
 	{
@@ -123,7 +107,6 @@ void eqep_speed_dir_main(void *args)
 		DebugP_log("Counter Clockwise, reverse \r\n");
 	}
 
-    DebugP_log("EQEP Speed Direction Test Passed!!\r\n");
     DebugP_log("All tests have passed!!\r\n");
     Board_driversClose();
     Drivers_close();
@@ -154,11 +137,5 @@ static void App_eqepIntrISR(void *handle)
    // Simplified: gFreq = gNewcount * 1000
    gFreq = (int32_t)(gNewcount * 1000 / QUAD_TIC );
    
-   // gSpeed Calculation:
-   // Motor has 4000 encoder holes (pulses per revolution)
-   // gFreq [pulses/sec] / 4000 [pulses/rev] = revolutions/sec
-   // (revolutions/sec) * 60 [sec/min] = RPM
-   gSpeed = (Float64)gFreq / ((Float64)QUAD_TIC) / (Float64)4000.f * (Float64)60.f; //se zabiju
-
    EQEP_clearInterruptStatus(gEqepBaseAddr,EQEP_INT_UNIT_TIME_OUT|EQEP_INT_GLOBAL);    // Clear interrupt flag
 }
