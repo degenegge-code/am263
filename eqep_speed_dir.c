@@ -63,13 +63,14 @@ int32_t gDir = 0;                       // Direction of rotation of motor
 volatile uint32_t gNewcount = 0 ;       // stores the actual position counter value
 
 // Function Prototypes:
-static void App_eqepIntrISR(void *handle);
+static void App_eqepISR(void *handle);
+void eqep_measure10(void);
 
 
 //functions: 
 
 //eqep set a main
-void eqep_speed_dir_main(void *args)
+void eqep_speed_dir_init(void *args)
 {
     int32_t status;
     HwiP_Params hwiPrms;
@@ -80,40 +81,55 @@ void eqep_speed_dir_main(void *args)
 
     HwiP_Params_init(&hwiPrms);     // Register & enable interrupt
 
-    hwiPrms.intNum      = CSLR_R5FSS0_CORE0_CONTROLSS_INTRXBAR0_OUT_0;      // Integrate with Syscfg
-    hwiPrms.callback    = &App_eqepIntrISR;                                 // Integrate with Syscfg
-    hwiPrms.isPulse     = APP_INT_IS_PULSE;                                 // Integrate with Syscfg
+    hwiPrms.intNum      = CSLR_R5FSS0_CORE0_CONTROLSS_INTRXBAR0_OUT_2;      //  Syscfg: INT XBAR -> CONFIG_INT_XBAR1, EQEP0_INT, INT_XBAR_2
+    hwiPrms.callback    = &App_eqepISR;                                 //předat do handle*
+    hwiPrms.isPulse     = APP_INT_IS_PULSE;                                 
     status              = HwiP_construct(&gEqepHwiObject, &hwiPrms);
     DebugP_assert(status == SystemP_SUCCESS);
 
     EQEP_loadUnitTimer(gEqepBaseAddr, UNIT_PERIOD); //radši to sem hodim i mimo syscfg
     EQEP_clearInterruptStatus(gEqepBaseAddr,EQEP_INT_UNIT_TIME_OUT|EQEP_INT_GLOBAL);     // Clear eqep interrupt 
+}
 
+void eqep_measure10(void)
+{
     //čekej na deset měření, tzn 10 period = 10* UNIT_PERIOD = 10ms
     while( *(volatile uint32_t *) ((uintptr_t) &gCount) < 10) //vau hustý
     {
         //Wait for Speed results
     }
-	
-    DebugP_log("frequency of pulses: %i \r\n" , gFreq);
+}
 
-	DebugP_log("Rotation direction = ");
+void eqep_close(void)
+{
+	DebugP_log("IRC Rotation direction = ");
 	if(gDir==1)
 	{
 		DebugP_log("Clockwise, forward \r\n");
 	}
-	if(gDir==-1)
+	else if(gDir==-1)
 	{
 		DebugP_log("Counter Clockwise, reverse \r\n");
 	}
+    else 
+    {
+        DebugP_log("AAAAAAAAAAAAAAAA HELP \r\n");   //it returns 0 as counterclockwise?
 
-    DebugP_log("All tests have passed!!\r\n");
-    Board_driversClose();
-    Drivers_close();
+    }
+
+    DebugP_log("EQEP tests have passed!!\r\n");
 }
 
-
-static void App_eqepIntrISR(void *handle)
+int32_t eqep_freq(void)
+{
+    if (gDir > 0)
+    {
+    return gFreq;
+    }
+    else 
+    return (-1)*gFreq;
+}
+static void App_eqepISR(void *handle)
 {
     gCount++;     // Increment count value 
     gNewcount = EQEP_getPositionLatch(gEqepBaseAddr);     // New position counter value 

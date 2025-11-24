@@ -12,13 +12,15 @@ void epwm_updown_close(void);           //konec epwm mainu
 uint16_t ecap_poll_close(void);         //konec ecapu
 uint16_t ecap_poll_init(void);          //zacatek ecapu
 void irc_out_go(void);                  //irc, go!
-void eqep_speed_dir_main(void *args);    //eqep meri 
+float ecap_poll_f_hz(void); 
+int32_t eqep_freq(void);
+void eqep_close(void);
+void eqep_speed_dir_init(void *args);
 
 
 int main(void)
 {
     System_init();
-    DebugP_log("sys inited\n"); //why do you work nigga?
     Board_init();
     Drivers_open();    //open drivers for console, uart, init board
     Board_driversOpen();
@@ -26,18 +28,28 @@ int main(void)
     DebugP_log("board inited\n");
 
     epwm_updown(NULL);
-
     irc_out_go();
+    ecap_poll_init();
+    eqep_speed_dir_init(NULL);
 
     DebugP_log("running to infinity\n");
 
-    ClockP_sleep(2);
-    eqep_speed_dir_main(NULL);
-    ClockP_sleep(2);
+    ClockP_sleep(1);
+    int32_t f_irc = eqep_freq();
+    ClockP_sleep(1);
+    float f = ecap_poll_f_hz();
+    ClockP_sleep(1);
 
+
+
+    DebugP_log("freq:  %f \n", f);
+    DebugP_log("freq_irc  %i \n", f_irc);
+
+    while (1) ClockP_sleep(1);
+    
+    ecap_poll_close();
     epwm_updown_close();
-
-    //DebugP_log("freq:  %f \n", f);
+    eqep_close();
 
     Board_driversClose();
     Drivers_close();

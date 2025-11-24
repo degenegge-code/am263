@@ -52,6 +52,7 @@ const input_xbar      = scripting.addModule("/xbar/input_xbar/input_xbar", {}, f
 const input_xbar1     = input_xbar.addInstance();
 const int_xbar        = scripting.addModule("/xbar/int_xbar/int_xbar", {}, false);
 const int_xbar1       = int_xbar.addInstance();
+const int_xbar2       = int_xbar.addInstance();
 
 /**
  * Write custom configuration values to the imported modules.
@@ -411,6 +412,10 @@ input_xbar1.xbarOutput = "GPIO43";
 
 int_xbar1.$name      = "CONFIG_INT_XBAR0";
 int_xbar1.xbarOutput = ["EQEP0_INT"];
+
+int_xbar2.$name      = "CONFIG_INT_XBAR1";
+int_xbar2.instance   = "INT_XBAR_2";
+int_xbar2.xbarOutput = ["EQEP0_INT"];
 
 /**
  * Pinmux solution for unlocked pins/peripherals. This ensures that minor changes to the automatic solver in a future
