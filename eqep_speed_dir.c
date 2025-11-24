@@ -7,6 +7,7 @@
 #include "ti_board_open_close.h"
 
 /*
+ * NEFUNGUJE VÝPOČET RPM
  *  Speed and Direction Measurement Using eQEP
  * 
  * This example can be used to sense the speed and direction of motor
@@ -69,7 +70,7 @@ static HwiP_Object gEqepHwiObject;
 uint32_t gCount = 0;                    // Counter to check measurement gets saturated
 uint32_t gOldcount = 0;                 // Stores the previous position counter value 
 int32_t gFreq = 0;                     // Measured signal frequency (respecting quadrature mode) of motor using eQEP 
-volatile int32_t gSpeed = 0;                    // Measured speed of motor in rpm 
+volatile float gSpeed = 0;                    // Measured speed of motor in rpm 
 int32_t gDir = 0;                       // Direction of rotation of motor 
 volatile uint32_t gNewcount = 0 ;       // stores the actual position counter value
 
@@ -109,7 +110,7 @@ void eqep_speed_dir_main(void *args)
 	
     DebugP_log("frequency of pulses: %i \r\n" , gFreq);
 
-    DebugP_log("Expected speed = 3000 RPM, Measured speed = %i RPM \r\n", gSpeed);
+    DebugP_log("Expected speed = 3000 RPM, Measured speed = %f RPM \r\n", gSpeed);
 
 	
 	DebugP_log("Rotation direction = ");
@@ -157,7 +158,7 @@ static void App_eqepIntrISR(void *handle)
    // Motor has 4000 encoder holes (pulses per revolution)
    // gFreq [pulses/sec] / 4000 [pulses/rev] = revolutions/sec
    // (revolutions/sec) * 60 [sec/min] = RPM
-   gSpeed = (int32_t)((int64_t)gFreq  / (int64_t)(4000UL * 60UL / QUAD_TIC));
+   gSpeed = (Float64)gFreq / ((Float64)QUAD_TIC) / (Float64)4000.f * (Float64)60.f; //se zabiju
 
    EQEP_clearInterruptStatus(gEqepBaseAddr,EQEP_INT_UNIT_TIME_OUT|EQEP_INT_GLOBAL);    // Clear interrupt flag
 }
