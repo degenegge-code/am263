@@ -18,8 +18,8 @@
 //proměnné:
 
 uint32_t gEcapBaseAddr = CONFIG_ECAP0_BASE_ADDR;
-volatile uint16_t cap2ircirc = 0;
-volatile uint16_t cap3ircirc = 0;
+volatile uint16_t cap2irc = 0;
+volatile uint16_t cap3irc = 0;
 
 //prototypy:
 uint32_t ecap_poll_prd_ns(void);
@@ -51,9 +51,9 @@ void ecap_poll_close(void)
 
 uint32_t ecap_poll_prd_ns(void)
 {
-    cap2ircirc = ECAP_getEventTimeStamp(gEcapBaseAddr, ECAP_EVENT_2);
-    cap3ircirc = ECAP_getEventTimeStamp(gEcapBaseAddr, ECAP_EVENT_3);
-    return  ((cap2ircirc+cap3ircirc)*ECAP_CLK_NS);
+    cap2irc = ECAP_getEventTimeStamp(gEcapBaseAddr, ECAP_EVENT_2);
+    cap3irc = ECAP_getEventTimeStamp(gEcapBaseAddr, ECAP_EVENT_3);
+    return  ((cap2irc+cap3irc)*ECAP_CLK_NS);
 }
 
 float ecap_poll_f_hz(void)

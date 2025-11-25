@@ -16,6 +16,7 @@ float ecap_poll_f_hz(void);
 int32_t eqep_freq(void);
 void eqep_close(void);
 void eqep_speed_dir_init(void *args);
+void pwm_conv_gen(void);
 
 
 int main(void)
@@ -32,15 +33,11 @@ int main(void)
     ecap_poll_init();
     eqep_speed_dir_init(NULL);
 
+    pwm_conv_gen();
     DebugP_log("running to infinity\n");
 
-    ClockP_sleep(1);
     int32_t f_irc = eqep_freq();
-    ClockP_sleep(1);
     float f = ecap_poll_f_hz();
-    ClockP_sleep(1);
-
-
 
     DebugP_log("freq:  %f \n", f);
     DebugP_log("freq_irc  %i \n", f_irc);
@@ -60,3 +57,27 @@ int main(void)
 
     return 0;
 }
+
+/*
+ * ten pinout přes bally je lepší v https://www.ti.com/lit/ug/spruj86c/spruj86c.pdf?ts=1762989043602 
+ * a konektory J na DOCKU v https://www.ti.com/lit/ug/spruj73/spruj73.pdf?ts=1763451183515&ref_url=https%253A%252F%252Fwww.ti.com%252Ftool%252FTMDSHSECDOCK-AM263¨
+ *
+ * Celej xample map:
+ *
+ * EPWM 0A/0B -> B2 / B1 -> HSEC 49 / 51 -> J20_1 / J20_2 (generuje updown pwm 50khz)
+ * - GPIO 43,  GPIO 44
+ * - INT XBAR0
+ * EPWM 1A/1B -> D3 / D2 -> HSEC 53 / 55 -> J20_3 / J20_4 (generuje předsazenou pwm k 0)
+ * - GPIO 45, GPIO 46
+ * - INT XBAR1
+ * ECAP - čtu epwm0 jako že to je převodník u / f, bez přerušení:
+ * - epwm0 ball B1 -> gpio 43 -> epwmtoecap_INPUT_XBAR0 -> Capture input is InputXBar Output 0
+ * "IRC": EPWM 2A/2B -> C2 / C1 -> HSEC 50 / 52 -> J21_1 / J21_2 (generuju bez přerušení 200kHz, b je posunuto o 90°)
+ * - ePWM2A -> GPIO47 -> INPUTXBAR1 -> PWMXBAR1 
+ * - ePWM2B -> GPIO48 -> INPUTXBAR2 -> PWMXBAR2 
+ * EQEP: EQEPxA Pin(EQEP0_A) B14 a EQEPxB Pin(EQEP0_B) A14 
+ * - QEPA Source: Signal comes from PWM Xbar out 1, QEPB Source: Signal comes from PWM Xbar out 2
+ * - INT_XBAR_2 
+ * EPWM 3A/3B -> E3 / E2 -> HSEC 54 / 56 -> J21_3 / J21_4 (generuje up, komplemtární a/b uměle, moduluje sin)
+ * - 
+ */

@@ -19,6 +19,7 @@
  * - ePWM2B -> GPIO48 -> INPUTXBAR2 -> PWMXBAR2 -> eQEP0B
  *
  * trying everything through this only, WITHOUT syscfg
+ * dont use interrupt
  */
  
 /*NASTAVENÍ PWMKY TAKTO, ABY ODPOVÍDALA IRC ČIDLU
@@ -49,7 +50,7 @@
 #define PWM_PRD   ((DEVICE_SYSCLK_FREQ / PWM_CLK / 2 / 4))  //no prsc and up-down 200 kHz, fastest. FIXME:  z nějakýho důvodu tam musim přidat dělení 4 - s těmi je to 200kHz
 
 // Global variables and objects 
-uint32_t gEpwmBaseAddr = CONFIG_EPWM2_BASE_ADDR;
+uint32_t gEpwmBaseAddrIRC = CONFIG_EPWM2_BASE_ADDR;
 uint32_t epwmInstance = 2;
 
 //upřimně neumim udlat nějakej pin assign...
@@ -63,21 +64,21 @@ void irc_out_go(void)
     
     SOC_setEpwmTbClk( epwmInstance, FALSE); //FIXME: tohle nic nedělá, možná implicit
 
-    EPWM_setClockPrescaler(gEpwmBaseAddr, 1, 1);
-    EPWM_setTimeBasePeriod(gEpwmBaseAddr, PWM_PRD);
-    EPWM_setTimeBaseCounterMode(gEpwmBaseAddr, EPWM_COUNTER_MODE_UP_DOWN);
-    EPWM_setTimeBaseCounter(gEpwmBaseAddr, 0);
+    EPWM_setClockPrescaler(gEpwmBaseAddrIRC, 1, 1);
+    EPWM_setTimeBasePeriod(gEpwmBaseAddrIRC, PWM_PRD);
+    EPWM_setTimeBaseCounterMode(gEpwmBaseAddrIRC, EPWM_COUNTER_MODE_UP_DOWN);
+    EPWM_setTimeBaseCounter(gEpwmBaseAddrIRC, 0);
 
-    EPWM_setCounterCompareValue(gEpwmBaseAddr, EPWM_COUNTER_COMPARE_A, 0);      
-    EPWM_setCounterCompareValue(gEpwmBaseAddr, EPWM_COUNTER_COMPARE_B, PWM_PRD/2); 
+    EPWM_setCounterCompareValue(gEpwmBaseAddrIRC, EPWM_COUNTER_COMPARE_A, 0);      
+    EPWM_setCounterCompareValue(gEpwmBaseAddrIRC, EPWM_COUNTER_COMPARE_B, PWM_PRD/2); 
 
-    EPWM_setActionQualifierAction(gEpwmBaseAddr, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH,  EPWM_AQ_OUTPUT_ON_TIMEBASE_ZERO);
-    EPWM_setActionQualifierAction(gEpwmBaseAddr, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_PERIOD);
-    EPWM_setActionQualifierAction(gEpwmBaseAddr, EPWM_AQ_OUTPUT_B, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPB);
-    EPWM_setActionQualifierAction(gEpwmBaseAddr, EPWM_AQ_OUTPUT_B, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_DOWN_CMPB);
+    EPWM_setActionQualifierAction(gEpwmBaseAddrIRC, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH,  EPWM_AQ_OUTPUT_ON_TIMEBASE_ZERO);
+    EPWM_setActionQualifierAction(gEpwmBaseAddrIRC, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_PERIOD);
+    EPWM_setActionQualifierAction(gEpwmBaseAddrIRC, EPWM_AQ_OUTPUT_B, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPB);
+    EPWM_setActionQualifierAction(gEpwmBaseAddrIRC, EPWM_AQ_OUTPUT_B, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_DOWN_CMPB);
 
 
-    EPWM_clearEventTriggerInterruptFlag(gEpwmBaseAddr);            //Clear any pending interrupts if any
+    EPWM_clearEventTriggerInterruptFlag(gEpwmBaseAddrIRC);            //Clear any pending interrupts if any
 
     SOC_setEpwmTbClk(epwmInstance, TRUE);  //FIXME: tohle nic nedělá
 
