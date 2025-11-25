@@ -33,14 +33,15 @@
 //PWM output at 200 kHz
 #define PWM_CLK   (10000u)
 #define PWM_PRD   ((DEVICE_SYSCLK_FREQ / PWM_CLK / 4))  //no prsc and up 10 kHz, FIXME:  z nějakýho důvodu tam musim přidat dělení 4 
+#define SAWS_IN_SIN  (10U)
 #define APP_INT_IS_PULSE    (1U)
 
 
 // Global variables and objects 
 uint32_t gEpwmBaseAddr3 = CONFIG_EPWM3_BASE_ADDR;
-double pi = 3.14;
-uint32_t i = 0;
+static uint32_t i = 0;
 static HwiP_Object  gEpwmHwiObject3;           //objekt 
+static uint32_t vals[SAWS_IN_SIN];
 
 // prototypy
 static void App_epwmgenISR(void *handle);
@@ -63,6 +64,12 @@ void pwm_conv_gen(void)
     hwiPrms3.callback    = &App_epwmgenISR;
     status              =   HwiP_construct(&gEpwmHwiObject3, &hwiPrms3);
     DebugP_assert(status == SystemP_SUCCESS);
+
+    //naplnim vals pro vypočet sinu
+    for (uint32_t y=0; y<SAWS_IN_SIN; y++)
+    {
+        vals[y] = (uint32_t)((sin(2.0*M_PI*((double)y/(double)SAWS_IN_SIN))+1.0)/2.0*PWM_PRD);   
+    }
 
     //enable gloabl loads a Enable EPWM Interrupt v syscfgu
     EPWM_setClockPrescaler(gEpwmBaseAddr3, 1, 1);
@@ -100,9 +107,9 @@ static void App_epwmgenISR(void *handle)
     {
         i = 0;
     }
-    uint32_t val = (uint32_t)(sin(2.00*pi*(i/10.00*PWM_PRD))+1)/2;   //width of pulse, 10 saws in one sinus, normalised sinus to positive
-    EPWM_setCounterCompareValue(gEpwmBaseAddr3, EPWM_COUNTER_COMPARE_A, val);
-    EPWM_setCounterCompareValue(gEpwmBaseAddr3, EPWM_COUNTER_COMPARE_B, PWM_PRD - val);
 
+    EPWM_setCounterCompareValue(gEpwmBaseAddr3, EPWM_COUNTER_COMPARE_A, vals[i]);
+    EPWM_setCounterCompareValue(gEpwmBaseAddr3, EPWM_COUNTER_COMPARE_B, PWM_PRD - vals[i]);
     EPWM_clearEventTriggerInterruptFlag(gEpwmBaseAddr3);     // Clear any pending interrupts if any
 }
+

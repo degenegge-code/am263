@@ -130,6 +130,8 @@ int32_t eqep_freq(void)
     else 
     return (-1)*gFreq;
 }
+
+
 static void App_eqepISR(void *handle)
 {
     gCount++;     // Increment count value 

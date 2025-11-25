@@ -72,12 +72,12 @@ int main(void)
  * - INT XBAR1
  * ECAP - čtu epwm0 jako že to je převodník u / f, bez přerušení:
  * - epwm0 ball B1 -> gpio 43 -> epwmtoecap_INPUT_XBAR0 -> Capture input is InputXBar Output 0
- * "IRC": EPWM 2A/2B -> C2 / C1 -> HSEC 50 / 52 -> J21_1 / J21_2 (generuju bez přerušení 200kHz, b je posunuto o 90°)
+ * "IRC": EPWM 2A/2B -> C2 / C1 -> HSEC 50 / 52 -> J21_1 / J21_2 (generuju 50/50 bez přerušení 200kHz, b je posunuto o 90°)
  * - ePWM2A -> GPIO47 -> INPUTXBAR1 -> PWMXBAR1 
  * - ePWM2B -> GPIO48 -> INPUTXBAR2 -> PWMXBAR2 
  * EQEP: EQEPxA Pin(EQEP0_A) B14 a EQEPxB Pin(EQEP0_B) A14 
  * - QEPA Source: Signal comes from PWM Xbar out 1, QEPB Source: Signal comes from PWM Xbar out 2
  * - INT_XBAR_2 
  * EPWM 3A/3B -> E3 / E2 -> HSEC 54 / 56 -> J21_3 / J21_4 (generuje up, komplemtární a/b uměle, moduluje sin)
- * - 
+ * - INT_XBAR_3
  */
