@@ -10,6 +10,7 @@ TOTO NELZE:
 -  Ověření funkce COMP C a COMP D. Nový CPU má dva komparační registry navíc. Jako test bych navrhoval jen předělat předchozí případ, kdy místo A a B použijeme C a D.
 
 TODO:
+- synchronizovat PWM výstup s jiným - tzn ovládám dva měniče o stejné frekvenci a stejným fázovým posunem, samozřejmě jiné pulsy. jednu modulovat jako sinusovku a druhou jako cosinusovku, ať je to pěkně vidět. bot pil je synchronizován, spouštím pulsy v botu, vypínám v comp. asymetrická pila. 
 - Ověřit čtení čidla polohy, které hodnotu předává asynchronní nebo synchronní komunikací. Tj. buď použít UART pro asynchronní komunikaci. Chceme nulovou spotřebu CPU. Tj. nastavit UART, aby příchozí hodnoty ukládal přes sebe na jedno místo, které budeme číst.  Pokud je komunikace synchronní, tak použít SPI jednotku a nebo PRU-ICSSG (pokud ta sběrnice bude nějaká divná).
 - u epwemek ověřit ty int nums atd
 
