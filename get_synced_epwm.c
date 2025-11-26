@@ -98,7 +98,7 @@ void submissive_gen(void)
     */
     EPWM_clearEventTriggerInterruptFlag(gEpwmBaseAddr4);            //Clear any pending interrupts if any
     EPWM_enablePhaseShiftLoad(gEpwmBaseAddr4);
-    EPWM_setPhaseShift(gEpwmBaseAddr4, 0);
+    EPWM_setPhaseShift(gEpwmBaseAddr4, 0); 
 
     DebugP_log("submissive_gen of cos 1kHz (fsw 10kHz) \n");
 
