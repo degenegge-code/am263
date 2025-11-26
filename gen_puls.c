@@ -19,20 +19,32 @@
  * - deadtimes 
  *  
  * Internal Connections SYSCFG:
- * - ePWM3A -> E2 ->  GPIO49 -> INPUTXBAR3 -> PWMXBAR1 -> eQEP0A
- * - ePWM3B -> E3 ->  GPIO50 -> INPUTXBAR4 -> PWMXBAR2 -> eQEP0B
+ * EPWM 3A/3B -> E3 / E2 -> HSEC 54 / 56 -> J21_3 / J21_4 (generuje up, komplemtární a/b uměle, moduluje sin)
+ * - INT_XBAR_3
  *
- * 
+ * z nějakýho duvodu mam 11 pulsů na periodu sinu (1100us)
+ * puls je 100 us = 10khz
  */
  
 
 // Defines 
 // Sysclk frequency 
-#define DEVICE_SYSCLK_FREQ  (200000000U)
+#define DEVICE_SYSCLK_FREQ  (200000000UL)
 
-//PWM output at 200 kHz
+//PWM output at 10 kHz
 #define PWM_CLK   (10000u)
-#define PWM_PRD   ((DEVICE_SYSCLK_FREQ / PWM_CLK / 4))  //no prsc and up 10 kHz, FIXME:  z nějakýho důvodu tam musim přidat dělení 4 
+/*
+ * původně vypadal kod takhle:
+ * ...
+ * #define PWM_PRD   ((DEVICE_SYSCLK_FREQ / PWM_CLK)/4)  //no prsc and up 10 kHz, FIXME: what is going on???
+ * ...
+ * EPWM_setClockPrescaler(gEpwmBaseAddr3, 1, 1);
+ * ... 
+ * což by vypadalo, jako že je prescaler nastaven na 1, tzn, žádné dělení, ale tak to není, protože 1 reprezentuje 2. tzn 0 je bez dělení
+ * EPWM_CLOCK_DIVIDER_1 = 0
+ * jen tak pro pobavení 
+*/
+#define PWM_PRD   (DEVICE_SYSCLK_FREQ / PWM_CLK)
 #define SAWS_IN_SIN  (10U)
 #define APP_INT_IS_PULSE    (1U)
 
@@ -72,9 +84,10 @@ void pwm_conv_gen(void)
     }
 
     //enable gloabl loads a Enable EPWM Interrupt v syscfgu
-    EPWM_setClockPrescaler(gEpwmBaseAddr3, 1, 1);
+    EPWM_setClockPrescaler(gEpwmBaseAddr3, EPWM_CLOCK_DIVIDER_1, EPWM_HSCLOCK_DIVIDER_1);
+
     EPWM_setTimeBasePeriod(gEpwmBaseAddr3, PWM_PRD);
-    EPWM_setTimeBaseCounterMode(gEpwmBaseAddr3, EPWM_COUNTER_MODE_UP_DOWN);
+    EPWM_setTimeBaseCounterMode(gEpwmBaseAddr3, EPWM_COUNTER_MODE_UP);
     EPWM_setTimeBaseCounter(gEpwmBaseAddr3, 0);
 
     EPWM_setCounterCompareValue(gEpwmBaseAddr3, EPWM_COUNTER_COMPARE_A, 0);      
@@ -83,8 +96,9 @@ void pwm_conv_gen(void)
     EPWM_setActionQualifierAction(gEpwmBaseAddr3, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH,  EPWM_AQ_OUTPUT_ON_TIMEBASE_ZERO);
     EPWM_setActionQualifierAction(gEpwmBaseAddr3, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
     EPWM_setActionQualifierAction(gEpwmBaseAddr3, EPWM_AQ_OUTPUT_B, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_ZERO);
-    EPWM_setActionQualifierAction(gEpwmBaseAddr3, EPWM_AQ_OUTPUT_B, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPB);
+    EPWM_setActionQualifierAction(gEpwmBaseAddr3, EPWM_AQ_OUTPUT_B, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
 
+    //jestli to nebude kolidovat s deadband unit, tak bych to nechal na cmpa vše
     EPWM_setRisingEdgeDeadBandDelayInput(gEpwmBaseAddr3, EPWM_DB_INPUT_EPWMA);
     EPWM_setRisingEdgeDeadBandDelayInput(gEpwmBaseAddr3, EPWM_DB_INPUT_EPWMB);
     EPWM_setDeadBandDelayPolarity(gEpwmBaseAddr3, EPWM_DB_RED, EPWM_DB_POLARITY_ACTIVE_HIGH);
@@ -99,7 +113,10 @@ void pwm_conv_gen(void)
 
 static void App_epwmgenISR(void *handle)
 {
-    if (i < 10)
+    EPWM_setCounterCompareValue(gEpwmBaseAddr3, EPWM_COUNTER_COMPARE_A, vals[i]);
+    EPWM_clearEventTriggerInterruptFlag(gEpwmBaseAddr3);     // Clear any pending interrupts if any
+
+    if (i < SAWS_IN_SIN-1) // indexuju s nulou
     {
         i ++;
     }
@@ -107,9 +124,5 @@ static void App_epwmgenISR(void *handle)
     {
         i = 0;
     }
-
-    EPWM_setCounterCompareValue(gEpwmBaseAddr3, EPWM_COUNTER_COMPARE_A, vals[i]);
-    EPWM_setCounterCompareValue(gEpwmBaseAddr3, EPWM_COUNTER_COMPARE_B, PWM_PRD - vals[i]);
-    EPWM_clearEventTriggerInterruptFlag(gEpwmBaseAddr3);     // Clear any pending interrupts if any
 }
 
