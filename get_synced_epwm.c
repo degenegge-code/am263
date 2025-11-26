@@ -22,6 +22,19 @@
  * EPWM 4A/4B -> D1 / E4 -> HSEC 57 / 59 -> J21_5 / J21_6 (generuje up, komplemtární a/b uměle, moduluje cos)
  * - INT_XBAR_4
  *
+ * ePWM5A/B is configured to simulate an output of DC/DC
+ * 
+ * The configuration for this example is as follows
+ * - PWM frequency is specified as 50 kHz
+ * ePWM5A se sepne za ZERO a vypne při CMPA, ePWM5B se zapne na TBPRD a vypne na CMPB
+ * after 3 secs it synchronises with external signal source (EPWM0B signal)
+ * width of pulse 5% and phase shift to sync 10%
+ *  
+ * Internal Connections SYSCFG:
+ * EPWM 5A/5B -> F2 / G2 -> HSEC 61 / 63 -> J20_7 / J20_8 (generuje 5% pulsy 50kHz)
+ * GPIO65 -> H1 -> HSEC 86 -> J21_18 (input pro signal 50kHz)
+ * 
+ * pozn.: GPIO0 -> P1 -> na HSECu asi neni? jedniy HSEC_GPIO je tam 41, ale to je tam jak HSEC_5V0
  */
  
 
@@ -33,11 +46,20 @@
 #define PWM_CLK   (10000u)
 #define PWM_PRD   (DEVICE_SYSCLK_FREQ / PWM_CLK)
 #define SAWS_IN_SIN  (10U)
+
+//PWM output at 50kHz
+#define PWM_CLK_2 (50000u)
+#define PWM_PRD_2   (DEVICE_SYSCLK_FREQ / PWM_CLK_2 / 2) //tbprd pro up down
+#define PULSE_WIDTH (PWM_PRD_2 /10)       //dvacetina periody je puls 
+#define OFFSET_TICS_2     (PWM_PRD_2/5)   // o 10% T posunuto oproti synchru 
+
 #define APP_INT_IS_PULSE    (1U)
 
 
 // Global variables and objects 
 uint32_t gEpwmBaseAddr4 = CONFIG_EPWM4_BASE_ADDR;
+uint32_t gEpwmBaseAddr5 = CONFIG_EPWM5_BASE_ADDR;
+
 static uint32_t i = 0;
 static HwiP_Object  gEpwmHwiObject4;           //objekt 
 static uint32_t vals[SAWS_IN_SIN];
@@ -97,12 +119,18 @@ void submissive_gen(void)
      * EPWM4->EPWMSYNCINSEL.SEL = EPWM3_SYNCOUT_SEL;    // selekce zdroje SYNCI = EPWM3
     */
     EPWM_clearEventTriggerInterruptFlag(gEpwmBaseAddr4);            //Clear any pending interrupts if any
-    EPWM_enablePhaseShiftLoad(gEpwmBaseAddr4);
-    EPWM_setPhaseShift(gEpwmBaseAddr4, 0); 
+
 
     DebugP_log("submissive_gen of cos 1kHz (fsw 10kHz) \n");
 
-    sync_epwems();
+    DebugP_log("submissive_gen: press single on oscilloscope\n");
+    ClockP_sleep(3);
+
+    EPWM_enablePhaseShiftLoad(gEpwmBaseAddr4);
+    EPWM_setPhaseShift(gEpwmBaseAddr4, 0); 
+    EPWM_setSyncInPulseSource(gEpwmBaseAddr4, EPWM_SYNC_IN_PULSE_SRC_SYNCOUT_EPWM3);
+
+    DebugP_log("internally synced epwm4 with epwm3 (rising edges) \n");
 
 }
 
@@ -122,11 +150,32 @@ static void App_genISR(void *handle)
     }
 }
 
-static void sync_epwems(void)
+void pwm_5p_off10(void)
 {
-    DebugP_log("press single on oscilloscope\n");
-    ClockP_sleep(3);
-    EPWM_setSyncInPulseSource(gEpwmBaseAddr4, EPWM_SYNC_IN_PULSE_SRC_SYNCOUT_EPWM3);
+    DebugP_log("pwm_5p_off10\r\n");
 
-    DebugP_log("synced epwm4 with epwm3 rising edge \n");
+    //set comp values HB:
+    EPWM_setCounterCompareValue(gEpwmBaseAddr5, EPWM_COUNTER_COMPARE_A, PULSE_WIDTH);
+    EPWM_setCounterCompareValue(gEpwmBaseAddr5, EPWM_COUNTER_COMPARE_B, PWM_PRD_2 - PULSE_WIDTH);
+    EPWM_setTimeBasePeriod(gEpwmBaseAddr5, PWM_PRD_2);
+    //všechno ostatní v syscfgu, aby to bylo pořádně nepřehlendé
+
+    EPWM_clearEventTriggerInterruptFlag(gEpwmBaseAddr5);            //Clear any pending interrupts if any
+
+    //v syscfgu GPIO -> INPUT XBAR -> ePWM SYNCI
+    //nebylo by spolehlivější? pin -> eCAP -> XBAR -> ePWM SYNCI
+    
+
+    DebugP_log("pwm_5p_off10: press single on oscilloscope \n");
+
+    EPWM_enablePhaseShiftLoad(gEpwmBaseAddr5);
+    EPWM_setPhaseShift(gEpwmBaseAddr5, 0);
+
+    ClockP_sleep(3);
+
+    EPWM_setSyncInPulseSource(gEpwmBaseAddr5, EPWM_SYNC_IN_PULSE_SRC_INPUTXBAR_OUT4);  //inputxbar pouze 4 a 20
+    DebugP_log("pwm_5p_off10: pwm5 externally synced \n");
+
+    //po synchronizaci je opožděna za synchronizačním signálem o 54us ! 
 }
+

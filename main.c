@@ -6,6 +6,8 @@
 #include "ti_drivers_open_close.h"
 #include "ti_board_open_close.h"
 
+#define BOARD_1
+
 // prototypyzde 
 void epwm_updown(void *args);
 void epwm_updown_close(void);           //konec epwm mainu
@@ -18,45 +20,55 @@ void eqep_close(void);
 void eqep_speed_dir_init(void *args);
 void pwm_conv_gen(void);
 void submissive_gen(void);
+void pwm_5p_off10(void); //rozjede pwmku a po 3s sync s gpio65
+
 
 
 int main(void)
-{
+{    
     System_init();
     Board_init();
     Drivers_open();    //open drivers for console, uart, init board
     Board_driversOpen();
-
     DebugP_log("board inited\n");
 
-    epwm_updown(NULL);
-    irc_out_go();
-    ecap_poll_init();
-    eqep_speed_dir_init(NULL);
-    pwm_conv_gen();
+    #if defined (BOARD_1)
 
-    submissive_gen();
+        epwm_updown(NULL);
+        irc_out_go();
+        ecap_poll_init();
+        eqep_speed_dir_init(NULL);
+        pwm_conv_gen();
+        submissive_gen();
 
-    DebugP_log("running to infinity\n");
+        pwm_5p_off10();
 
-    int32_t f_irc = eqep_freq();
-    float f = ecap_poll_f_hz();
+        DebugP_log("running to infinity\n");
 
-    DebugP_log("freq:  %f \n", f);
-    DebugP_log("freq_irc  %i \n", f_irc);
+        int32_t f_irc = eqep_freq();
+        float f = ecap_poll_f_hz();
 
-    while (1) ClockP_sleep(1);
-    
-    ecap_poll_close();
-    epwm_updown_close();
-    eqep_close();
+        DebugP_log("freq:  %f \n", f);
+        DebugP_log("freq_irc  %i \n", f_irc);
 
-    Board_driversClose();
-    Drivers_close();
-    Board_deinit();
-    DebugP_log("board closed\n");
-    System_deinit();
-    DebugP_log("sys closed\n");
+        while (1) ClockP_sleep(1);
+
+        ecap_poll_close();
+        epwm_updown_close();
+        eqep_close();
+
+    #else
+        //na boardu 2 jenom generovat neustále pulsiky
+        epwm_updown(NULL); 
+
+    #endif
+
+       Board_driversClose();
+       Drivers_close();
+       Board_deinit();
+       DebugP_log("board closed\n");
+       System_deinit();
+       DebugP_log("sys closed\n");
 
     return 0;
 }
@@ -69,10 +81,10 @@ int main(void)
  *
  * EPWM 0A/0B -> B2 / B1 -> HSEC 49 / 51 -> J20_1 / J20_2 (generuje updown pwm 50khz)
  * - GPIO 43,  GPIO 44
- * - INT XBAR0
+ * - INT XBAR0 (isr nic nedělá vlastně)
  * EPWM 1A/1B -> D3 / D2 -> HSEC 53 / 55 -> J20_3 / J20_4 (generuje předsazenou pwm k 0)
  * - GPIO 45, GPIO 46
- * - INT XBAR1
+ * - INT XBAR1 (isr nic nedělá vlastně)
  * ECAP - čtu epwm0 jako že to je převodník u / f, bez přerušení:
  * - epwm0 ball B1 -> gpio 43 -> epwmtoecap_INPUT_XBAR0 -> Capture input is InputXBar Output 0
  * "IRC": EPWM 2A/2B -> C2 / C1 -> HSEC 50 / 52 -> J21_1 / J21_2 (generuju 50/50 bez přerušení 200kHz, b je posunuto o 90°)
@@ -80,7 +92,12 @@ int main(void)
  * - ePWM2B -> GPIO48 -> INPUTXBAR2 -> PWMXBAR2 
  * EQEP: EQEPxA Pin(EQEP0_A) B14 a EQEPxB Pin(EQEP0_B) A14 
  * - QEPA Source: Signal comes from PWM Xbar out 1, QEPB Source: Signal comes from PWM Xbar out 2
- * - INT_XBAR_2 
+ * - INT_XBAR_2 (EQEP0_INT - isr get dir, get pos)
  * EPWM 3A/3B -> E3 / E2 -> HSEC 54 / 56 -> J21_3 / J21_4 (generuje up, komplemtární a/b uměle, moduluje sin)
- * - INT_XBAR_3
+ * - INT_XBAR_3 (přerušení na isr pwmky, modulace)
+ * EPWM 4A/4B -> D1 / E4 -> HSEC 57 / 59 -> J21_5 / J21_6 (generuje up, komplemtární a/b uměle, moduluje cos, po 3s se synchronizuje s epwm4)
+ * - INT_XBAR_4 (přerušení na isr pwmky, modulace)
+ * EPWM 5A/5B -> F2 / G2 -> HSEC 61 / 63 -> J21_7 / J21_8 (generuje 5% pulsy 50kHz)
+ * GPIO65 -> H1 -> HSEC 86 -> J21_18 (input pro signal 50kHz)
+ * - CONFIG_INPUT_XBAR4 GPIO65 INPUT_XBAR_4
  */

@@ -17,8 +17,11 @@ const epwm2           = epwm.addInstance();
 const epwm3           = epwm.addInstance();
 const epwm4           = epwm.addInstance();
 const epwm5           = epwm.addInstance();
+const epwm6           = epwm.addInstance();
 const eqep            = scripting.addModule("/drivers/eqep/eqep", {}, false);
 const eqep1           = eqep.addInstance();
+const gpio            = scripting.addModule("/drivers/gpio/gpio", {}, false);
+const gpio1           = gpio.addInstance();
 const debug_log       = scripting.addModule("/kernel/dpl/debug_log");
 const dpl_cfg         = scripting.addModule("/kernel/dpl/dpl_cfg");
 const mpu_armv7       = scripting.addModule("/kernel/dpl/mpu_armv7", {}, false);
@@ -52,6 +55,7 @@ const epwm_xbar1      = epwm_xbar.addInstance();
 const epwm_xbar2      = epwm_xbar.addInstance();
 const input_xbar      = scripting.addModule("/xbar/input_xbar/input_xbar", {}, false);
 const input_xbar1     = input_xbar.addInstance();
+const input_xbar4     = input_xbar.addInstance();
 const int_xbar        = scripting.addModule("/xbar/int_xbar/int_xbar", {}, false);
 const int_xbar1       = int_xbar.addInstance();
 const int_xbar2       = int_xbar.addInstance();
@@ -160,6 +164,29 @@ epwm5.EPWM.$assign                                    = "EPWM4";
 epwm5.EPWM.A.$assign                                  = "EPWM4_A";
 epwm5.EPWM.B.$assign                                  = "EPWM4_B";
 
+epwm6.$name                                                      = "CONFIG_EPWM5";
+epwm6.epwmTimebase_periodGld                                     = true;
+epwm6.epwmTimebase_phaseEnable                                   = true;
+epwm6.epwmTimebase_phaseShift                                    = 11;
+epwm6.epwmTimebase_syncInPulseSource                             = "EPWM_SYNC_IN_PULSE_SRC_INPUTXBAR_OUT4";
+epwm6.epwmTimebase_counterMode                                   = "EPWM_COUNTER_MODE_UP_DOWN";
+epwm6.epwmCounterCompare_cmpAGld                                 = true;
+epwm6.epwmCounterCompare_cmpBGld                                 = true;
+epwm6.epwmActionQualifier_EPWM_AQ_OUTPUT_A_gld                   = true;
+epwm6.epwmActionQualifier_EPWM_AQ_OUTPUT_A_shadowMode            = true;
+epwm6.epwmActionQualifier_EPWM_AQ_OUTPUT_B_gld                   = true;
+epwm6.epwmActionQualifier_EPWM_AQ_OUTPUT_B_shadowMode            = true;
+epwm6.epwmActionQualifier_EPWM_AQ_OUTPUT_A_ON_TIMEBASE_ZERO      = "EPWM_AQ_OUTPUT_HIGH";
+epwm6.epwmActionQualifier_EPWM_AQ_OUTPUT_A_ON_TIMEBASE_UP_CMPA   = "EPWM_AQ_OUTPUT_LOW";
+epwm6.epwmActionQualifier_EPWM_AQ_OUTPUT_B_ON_TIMEBASE_PERIOD    = "EPWM_AQ_OUTPUT_HIGH";
+epwm6.epwmActionQualifier_EPWM_AQ_OUTPUT_B_ON_TIMEBASE_DOWN_CMPB = "EPWM_AQ_OUTPUT_LOW";
+epwm6.epwmCounterCompare_cmpA                                    = 1;
+epwm6.epwmTimebase_period                                        = 55;
+epwm6.epwmCounterCompare_cmpB                                    = 2;
+epwm6.EPWM.$assign                                               = "EPWM5";
+epwm6.EPWM.A.$assign                                             = "EPWM5_A";
+epwm6.EPWM.B.$assign                                             = "EPWM5_B";
+
 eqep1.$name                = "CONFIG_EQEP0";
 eqep1.enableInterrupt      = true;
 eqep1.selectSourceB        = "EQEP_SOURCE_PWMXBAROUT2";
@@ -178,6 +205,9 @@ eqep1.unitTimerPeriod      = 200000;
 eqep1.EQEP.$assign         = "EQEP0";
 eqep1.EQEP.A.$assign       = "EQEP0_A";
 eqep1.EQEP.B.$assign       = "EQEP0_B";
+
+gpio1.$name          = "CONFIG_GPIO65";
+gpio1.GPIO_n.$assign = "EPWM11_A";
 
 const soc_ctrl_adc    = scripting.addModule("/drivers/soc_ctrl/v0/subModules/soc_ctrl_adc", {}, false);
 const soc_ctrl_adc1   = soc_ctrl_adc.addInstance({}, false);
@@ -448,6 +478,10 @@ epwm_xbar2["xbarConfig-0"].instance = "INPUT_XBAR_2";
 
 input_xbar1.xbarOutput = "GPIO43";
 input_xbar1.$name      = "epwmtoecap_INPUT_XBAR0";
+
+input_xbar4.$name      = "CONFIG_INPUT_XBAR4";
+input_xbar4.instance   = "INPUT_XBAR_4";
+input_xbar4.xbarOutput = "GPIO65";
 
 int_xbar1.$name      = "CONFIG_INT_XBAR0";
 int_xbar1.xbarOutput = ["EPWM0_INT"];
