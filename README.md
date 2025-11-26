@@ -14,6 +14,7 @@ TODO:
 - Ověřit čtení čidla polohy, které hodnotu předává asynchronní nebo synchronní komunikací. Tj. buď použít UART pro asynchronní komunikaci. Chceme nulovou spotřebu CPU. Tj. nastavit UART, aby příchozí hodnoty ukládal přes sebe na jedno místo, které budeme číst.  Pokud je komunikace synchronní, tak použít SPI jednotku a nebo PRU-ICSSG (pokud ta sběrnice bude nějaká divná).
 - u epwemek ověřit ty int nums atd
 - #define PWM_PRD   ((DEVICE_SYSCLK_FREQ / PWM_CLK / 2 / 4))  //no prsc and up-down 200 kHz, fastest. FIXME:  z nějakýho důvodu tam musim přidat dělení 4 - s těmi je to 200kHz
+- Ověřit funkci synchronizace PWM signálů generovaných pomocí dvou regulátorů. K tomu účelu nám M. Kopecký poskytnul druhý KIT i podvozkem na vyvedení signálů. Na jednom kitu generovat PWM signál, např. použít SW co již máme pro test ePWM a jako synchronizační signál OUT  použít ten druhý kanál s posunem ½ periody. Na druhém kitu generovat nejaký úzký puls cca 5% periody, který bude posunut oproti náběžné hraně synchronizačního  pulsu o 10% periody.
 
 
 wtfs:

@@ -22,8 +22,7 @@
  * EPWM 3A/3B -> E3 / E2 -> HSEC 54 / 56 -> J21_3 / J21_4 (generuje up, komplemtární a/b uměle, moduluje sin)
  * - INT_XBAR_3
  *
- * z nějakýho duvodu mam 11 pulsů na periodu sinu (1100us)
- * puls je 100 us = 10khz
+ * SYNC může způsobit ±1–2 cycle jitter; TRM varuje, aby SYNCO source nebyl CTR=0 nebo CTR=CMPB pokud chci bez jitteru
  */
  
 
@@ -103,6 +102,22 @@ void pwm_conv_gen(void)
     EPWM_setRisingEdgeDeadBandDelayInput(gEpwmBaseAddr3, EPWM_DB_INPUT_EPWMB);
     EPWM_setDeadBandDelayPolarity(gEpwmBaseAddr3, EPWM_DB_RED, EPWM_DB_POLARITY_ACTIVE_HIGH);
 
+    /*
+     * // pseudocode 
+     * EPWM3->TBPRD = myPeriod;
+     * EPWM3->TBCTL.CTRMODE = UP_COUNT;  
+     * EPWM3->TBCTL.SYNCOSEL = SYNCO_CTR_ZERO; // generuj SYNCO při CTR=0
+     *
+     */
+    EPWM_enableSyncOutPulseSource(gEpwmBaseAddr3, EPWM_SYNC_OUT_PULSE_ON_CNTR_ZERO);
+
+    /*
+     * Vytáhnout SYNCOUT ven (route to pin) -> PWMSYNCOUTXBAR
+     * PWMSyncOutXBar.Out[n] a přiřaď zdroj např. ePWMx SYNCOUT
+     * PWMSyncOutXBar.G0.SEL[XX] = SELECT_EPWM3_SYNCO; // konfiguruj XBAR
+     * OUTPUTXBAR.G9.0.SELECT = PWMSyncOutXBar.Out0;
+     * PINMUX_configurePin(PIN_X, FUNC_OUTPUTXBAR_G9_0);
+     */
 
     EPWM_clearEventTriggerInterruptFlag(gEpwmBaseAddr3);            //Clear any pending interrupts if any
 

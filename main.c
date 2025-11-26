@@ -17,6 +17,7 @@ int32_t eqep_freq(void);
 void eqep_close(void);
 void eqep_speed_dir_init(void *args);
 void pwm_conv_gen(void);
+void submissive_gen(void);
 
 
 int main(void)
@@ -32,8 +33,10 @@ int main(void)
     irc_out_go();
     ecap_poll_init();
     eqep_speed_dir_init(NULL);
-
     pwm_conv_gen();
+
+    submissive_gen();
+
     DebugP_log("running to infinity\n");
 
     int32_t f_irc = eqep_freq();
