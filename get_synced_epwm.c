@@ -15,11 +15,13 @@
  * The configuration for this example is as follows
  * - PWM frequency is specified as 10 kHz, asymmetrical comaparation 
  * - modulating cosinus 1kHz
- * - deadtimes 
- *  
+ * - TODO: deadtimes 
+ *
  * Internal Connections SYSCFG:
  * EPWM 4A/4B -> D1 / E4 -> HSEC 57 / 59 -> J21_5 / J21_6 (generuje up, komplemtární a/b uměle, moduluje cos)
  * - INT_XBAR_4
+ *
+ *
  *
  * ePWM5A/B is configured to simulate an output of DC/DC
  * 
@@ -34,6 +36,7 @@
  * EPWM 5A/5B -> F2 / G2 -> HSEC 61 / 63 -> J20_7 / J20_8 (generuje 5% pulsy 50kHz)
  * GPIO65 -> H1 -> HSEC 86 -> J21_18 (input pro signal 50kHz)
  * EPWM 6A/6B -> E1 / F3 -> HSEC 58 / 60 -> J21_5 / J21_6 (same functionality, checking multiple synchro)
+ * INPUT_XBAR_OUT4 -> EPWM5 SYNCI and EPWM6 SYNCI
  * 
  * pozn.: GPIO0 -> P1 -> na HSECu asi neni? jedniy HSEC_GPIO je tam 41, ale to je tam jak HSEC_5V0
  */
@@ -135,24 +138,29 @@ void submissive_gen(void)
 
     DebugP_log("submissive_gen of cos 1kHz (fsw 10kHz) \n");
 
-    DebugP_log("submissive_gen: press single on oscilloscope\n");
-    ClockP_sleep(3);
+    //for exemplar display on oscilloscope uncomment: 
+    //DebugP_log("submissive_gen: press single on oscilloscope\n"); 
+    //ClockP_sleep(3);      //so you can see the waveform before sync starts
 
-    EPWM_enablePhaseShiftLoad(gEpwmBaseAddr4);
-    EPWM_setPhaseShift(gEpwmBaseAddr4, 0); 
-    EPWM_setSyncInPulseSource(gEpwmBaseAddr4, EPWM_SYNC_IN_PULSE_SRC_SYNCOUT_EPWM3);
+    EPWM_enablePhaseShiftLoad(gEpwmBaseAddr4);  //need this
+    EPWM_setPhaseShift(gEpwmBaseAddr4, 0);      //zero phase shift, sync on rising edge
+    EPWM_setSyncInPulseSource(gEpwmBaseAddr4, EPWM_SYNC_IN_PULSE_SRC_SYNCOUT_EPWM3); //sync to epwm3
 
     DebugP_log("internally synced epwm4 with epwm3 (rising edges) \n");
 
 }
 
-
+/*
+ * App_genISR - Interrupt Service Routine for ePWM4 to update CMPA value to generate 
+ *               a cosinus modulated PWM signal. 
+ * void handle:  Pointer to the ePWM instance in hwiparams
+ */
 static void App_genISR(void *handle)
 {
-    EPWM_setCounterCompareValue(gEpwmBaseAddr4, EPWM_COUNTER_COMPARE_A, vals[i]);
+    EPWM_setCounterCompareValue(gEpwmBaseAddr4, EPWM_COUNTER_COMPARE_A, vals[i]); //sin
     EPWM_clearEventTriggerInterruptFlag(gEpwmBaseAddr4);     // Clear any pending interrupts if any
 
-    if (i < SAWS_IN_SIN-1) // indexuju s nulou
+    if (i < SAWS_IN_SIN-1) // indexuju s nulou, takže -1. prochazim pole. 
     {
         i ++;
     }
@@ -162,57 +170,75 @@ static void App_genISR(void *handle)
     }
 }
 
-void pwm_5p_off10(void)
+/*
+ * pwm_5p_off10 - sets up ePWM5 as a pwm signal with frequency 50kHz and pulse width 5% of period
+ *                  after 3 seconds it synchronises with external signal source (EPWM0B signal f.ex.)
+ *                  ePWM5A/B -> F2 / G2 -> HSEC 61 / 63 -> J20_7 / J20_8   
+ *                  10% shift in comparison to source signal through gpio and xbar. 
+ * /param true_for_shift - if true, phase shift of 10% is applied, else zero phase shift
+ * Note: set up syscfg for inputxbar out4 to be connected to ePWM5 syncin, set initialize epwm5, e
+ *       nable global loads, dont need interrupt, set comps and period as needed, well set everything there
+ */
+void pwm_5p_off10(bool true_for_shift)
 {
     DebugP_log("pwm_5p_off10\r\n");
 
-    //set comp values HB:
-    EPWM_setCounterCompareValue(gEpwmBaseAddr5, EPWM_COUNTER_COMPARE_A, PULSE_WIDTH);
-    EPWM_setCounterCompareValue(gEpwmBaseAddr5, EPWM_COUNTER_COMPARE_B, PWM_PRD_2 - PULSE_WIDTH);
-    EPWM_setTimeBasePeriod(gEpwmBaseAddr5, PWM_PRD_2);
-    //všechno ostatní v syscfgu, aby to bylo pořádně nepřehlendé
+    EPWM_setCounterCompareValue(gEpwmBaseAddr5, EPWM_COUNTER_COMPARE_A, PULSE_WIDTH); //set comp a
+    EPWM_setCounterCompareValue(gEpwmBaseAddr5, EPWM_COUNTER_COMPARE_B, PWM_PRD_2 - PULSE_WIDTH); //set comp b
+    EPWM_setTimeBasePeriod(gEpwmBaseAddr5, PWM_PRD_2); // set period, up mode, tzn je to pravdu perioda
+
+    //všechno ostatní v syscfgu, aby to bylo pořádně nepřehlendé...
 
     EPWM_clearEventTriggerInterruptFlag(gEpwmBaseAddr5);            //Clear any pending interrupts if any
 
-    //v syscfgu GPIO -> INPUT XBAR -> ePWM SYNCI
-    //nebylo by spolehlivější? pin -> eCAP -> XBAR -> ePWM SYNCI
-    
+    // v syscfgu GPIO -> INPUT XBAR -> ePWM SYNCI
+    // nebylo by spolehlivější? pin -> eCAP -> XBAR -> ePWM SYNCI
+    // možná ano, ale tohle jednoduché funguje perfektně
 
     DebugP_log("pwm_5p_off10: press single on oscilloscope \n");
 
-    EPWM_enablePhaseShiftLoad(gEpwmBaseAddr5);
-    EPWM_setPhaseShift(gEpwmBaseAddr5, 0);
+    EPWM_enablePhaseShiftLoad(gEpwmBaseAddr5);  //need this
+    if (true_for_shift)
+    {
+        EPWM_setPhaseShift(gEpwmBaseAddr5, OFFSET_TICS_2);    //phase shift 10% of period
+    }
+    else
+    {
+        EPWM_setPhaseShift(gEpwmBaseAddr5, 0);    //zero phase shift, sync on rising edge, but with offset in inputxbar
+    }
 
-    ClockP_sleep(3);
+    ClockP_sleep(3);    //to see unsynced waveform press single on scope and then compare after 3secs
 
-    EPWM_setSyncInPulseSource(gEpwmBaseAddr5, EPWM_SYNC_IN_PULSE_SRC_INPUTXBAR_OUT4);  //inputxbar pouze 4 a 20
+    EPWM_setSyncInPulseSource(gEpwmBaseAddr5, EPWM_SYNC_IN_PULSE_SRC_INPUTXBAR_OUT4);  //inputxbar pouze 4 a 20!
     DebugP_log("pwm_5p_off10: pwm5 externally synced \n");
 
     //po synchronizaci na jedné desce je opožděna za synchronizačním signálem o 54ns 
-    // po synchronizaci z jiné desky je zpoždení 54-59ns. hodiny nejsou uplně stejný, tak to bude tim
+    // po synchronizaci z jiné desky je zpoždení 54-59ns. hodiny nejsou uplně stejný, takže ripple
+    // toto odpovídá 10 tikům systémových hodin 200MHz = 5ns na tik
 }
 
-void pwm_5p_off10_2(void)
+/*
+ * pwm_5p_off10_2 - sets up ePWM6 as a pwm signal with frequency 50kHz and pulse width 5% of period
+ *                  after 3 seconds it synchronises with external signal source (EPWM0B signal f.ex.)
+ *                  ePWM6A/B -> E1 / F3 -> HSEC 58 / 60 -> J21_5 / J21_6   
+ *                  10% shift in comparison to source signal through gpio and xbar. for description
+ *                  see pwm_5p_off10, it is the same. 
+ * /param true_for_shift - if true, phase shift of 10% is applied, else zero phase shift
+ * Note: set up syscfg for inputxbar out4 to be connected to ePWM6 syncin, set initialize epwm6,
+ * enable global loads, dont need interrupt, set comps and period as needed, well set everything there
+ */
+void pwm_5p_off10_2(bool true_for_shift)
 {
     DebugP_log("pwm_5p_off10_2\r\n");
-
-    //set comp values HB:
     EPWM_setCounterCompareValue(gEpwmBaseAddr6, EPWM_COUNTER_COMPARE_A, PULSE_WIDTH);
     EPWM_setCounterCompareValue(gEpwmBaseAddr6, EPWM_COUNTER_COMPARE_B, PWM_PRD_2 - PULSE_WIDTH);
     EPWM_setTimeBasePeriod(gEpwmBaseAddr6, PWM_PRD_2);
-    //všechno ostatní v syscfgu, aby to bylo pořádně nepřehlendé
-
-    EPWM_clearEventTriggerInterruptFlag(gEpwmBaseAddr6);            //Clear any pending interrupts if any
-
+    EPWM_clearEventTriggerInterruptFlag(gEpwmBaseAddr6); 
     DebugP_log("pwm_5p_off10_2: press single on oscilloscope \n");
-
     EPWM_enablePhaseShiftLoad(gEpwmBaseAddr6);
-    EPWM_setPhaseShift(gEpwmBaseAddr6, 0);
-
+    if (true_for_shift) EPWM_setPhaseShift(gEpwmBaseAddr6, OFFSET_TICS_2);  
+    else EPWM_setPhaseShift(gEpwmBaseAddr6, 0); 
     ClockP_sleep(3);
-
-    EPWM_setSyncInPulseSource(gEpwmBaseAddr6, EPWM_SYNC_IN_PULSE_SRC_INPUTXBAR_OUT4);  //inputxbar pouze 4 a 20
+    EPWM_setSyncInPulseSource(gEpwmBaseAddr6, EPWM_SYNC_IN_PULSE_SRC_INPUTXBAR_OUT4);
     DebugP_log("pwm_5p_off10_2: pwm6 externally synced \n");
-
-
 }
