@@ -21,6 +21,7 @@ void eqep_speed_dir_init(void *args);
 void pwm_conv_gen(void);
 void submissive_gen(void);
 void pwm_5p_off10(void); //rozjede pwmku a po 3s sync s gpio65
+void pwm_5p_off10_2(void);
 
 
 
@@ -42,6 +43,7 @@ int main(void)
         submissive_gen();
 
         pwm_5p_off10();
+        pwm_5p_off10_2();
 
         DebugP_log("running to infinity\n");
 
