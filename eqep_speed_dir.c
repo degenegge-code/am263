@@ -55,7 +55,7 @@
 #define QUAD_TIC 4U //Quadrature-clock mode
 
 // Global variables and objects :
-uint32_t gEqepBaseAddr;
+uint32_t gEqepBaseAddr = CONFIG_EQEP0_BASE_ADDR;
 static HwiP_Object gEqepHwiObject;
 uint32_t gCount = 0;                    // Counter to check measurement gets saturated
 uint32_t gOldcount = 0;                 // Stores the previous position counter value 
@@ -70,28 +70,34 @@ void eqep_measure10(void);
 
 //functions: 
 
-//eqep set a main
+/*
+ * eqep_speed_dir_init - Initializes eQEP for speed and direction measurement
+ *                      and configures and enables the eQEP interrupt.
+ */
 void eqep_speed_dir_init(void *args)
 {
     int32_t status;
     HwiP_Params hwiPrms;
 
     DebugP_log("EQEP Speed Direction Test Started ...\r\n");
-	
-    gEqepBaseAddr = CONFIG_EQEP0_BASE_ADDR;
 
     HwiP_Params_init(&hwiPrms);     // Register & enable interrupt
 
-    hwiPrms.intNum      = CSLR_R5FSS0_CORE0_CONTROLSS_INTRXBAR0_OUT_2;      //  Syscfg: INT XBAR -> CONFIG_INT_XBAR1, EQEP0_INT, INT_XBAR_2
+    hwiPrms.intNum      = CSLR_R5FSS0_CORE0_CONTROLSS_INTRXBAR0_OUT_2;      
+    //  Syscfg: INT XBAR -> CONFIG_INT_XBAR1, EQEP0_INT, INT_XBAR_2
     hwiPrms.callback    = &App_eqepISR;                                 //předat do handle*
     hwiPrms.isPulse     = APP_INT_IS_PULSE;                                 
     status              = HwiP_construct(&gEqepHwiObject, &hwiPrms);
     DebugP_assert(status == SystemP_SUCCESS);
 
     EQEP_loadUnitTimer(gEqepBaseAddr, UNIT_PERIOD); //radši to sem hodim i mimo syscfg
-    EQEP_clearInterruptStatus(gEqepBaseAddr,EQEP_INT_UNIT_TIME_OUT|EQEP_INT_GLOBAL);     // Clear eqep interrupt 
+    EQEP_clearInterruptStatus(gEqepBaseAddr,EQEP_INT_UNIT_TIME_OUT|EQEP_INT_GLOBAL);     // Clear eqep interrupts
 }
 
+/*
+ * eqep_measure10 - Waits until 10 unit timeouts have occurred to allow speed
+ *                  and direction measurement to be completed.
+ */
 void eqep_measure10(void)
 {
     //čekej na deset měření, tzn 10 period = 10* UNIT_PERIOD = 10ms
@@ -101,6 +107,9 @@ void eqep_measure10(void)
     }
 }
 
+/*
+ * eqep_close - Closes the EQEP driver and prints the final direction of rotation.
+ */
 void eqep_close(void)
 {
 	DebugP_log("IRC Rotation direction = ");
@@ -114,13 +123,17 @@ void eqep_close(void)
 	}
     else 
     {
-        DebugP_log("AAAAAAAAAAAAAAAA HELP \r\n");   //it returns 0 as counterclockwise?
+        DebugP_log("AAAAAAAAAAAAAAAA HELP \r\n");   //it should return 0 as counterclockwise?
 
     }
 
     DebugP_log("EQEP tests have passed!!\r\n");
 }
 
+/*
+ * eqep_freq - returns the measured frequency with sign indicating direction
+ *            positive for forward, negative for reverse
+ */
 int32_t eqep_freq(void)
 {
     if (gDir > 0)
@@ -132,6 +145,11 @@ int32_t eqep_freq(void)
 }
 
 
+/*
+ * App_eqepISR - Interrupt Service Routine for eQEP to calculate speed and direction
+ *               of motor using eQEP position counter value.
+ * void handle:  Pointer to the eQEP instance in hwiparams
+ */
 static void App_eqepISR(void *handle)
 {
     gCount++;     // Increment count value 

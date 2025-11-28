@@ -56,10 +56,17 @@
 uint32_t gEpwmBaseAddrIRC = CONFIG_EPWM2_BASE_ADDR;
 uint32_t epwmInstance = 2;
 
-//upřimně neumim udlat nějakej pin assign...
+//upřimně neumim udlat nějakej pin assign... 
 //stejně to musim aspoň pustit v syscfgu, jakože přidat další epwmku,a by to brtalo jmena těch maker atd. 
-// takže to, kvuli čemu mam syscfg teď: povolit global loady nastavení a nastavení výstupního pinu (instance)
 
+//Funkce:
+
+/*
+ * irc_out_go - sets up ePWM2 as a generator of complementary PWM signal
+ *               with frequency 200kHz, 50% duty cycle on A and 90° phase shifted on B
+ *               ePWM2A/B -> C2 / C1 -> HSEC 50 / 52 -> J21_1 / J21_2   
+ * Note: set up syscfg for epwm2, initialize epwm2, enable global loads
+ */
 void irc_out_go(void)
 {
     DebugP_log("irc_out_go \n");
@@ -67,13 +74,13 @@ void irc_out_go(void)
     
     SOC_setEpwmTbClk( epwmInstance, FALSE); //FIXME: tohle nic nedělá, možná implicit
 
-    EPWM_setClockPrescaler(gEpwmBaseAddrIRC, EPWM_CLOCK_DIVIDER_1, EPWM_HSCLOCK_DIVIDER_1);
-    EPWM_setTimeBasePeriod(gEpwmBaseAddrIRC, PWM_PRD);
-    EPWM_setTimeBaseCounterMode(gEpwmBaseAddrIRC, EPWM_COUNTER_MODE_UP_DOWN);
-    EPWM_setTimeBaseCounter(gEpwmBaseAddrIRC, 0);
+    EPWM_setClockPrescaler(gEpwmBaseAddrIRC, EPWM_CLOCK_DIVIDER_1, EPWM_HSCLOCK_DIVIDER_1);  //no prescalers
+    EPWM_setTimeBasePeriod(gEpwmBaseAddrIRC, PWM_PRD);                     // set period, up down mode
+    EPWM_setTimeBaseCounterMode(gEpwmBaseAddrIRC, EPWM_COUNTER_MODE_UP_DOWN); 
+    EPWM_setTimeBaseCounter(gEpwmBaseAddrIRC, 0);                          //set counter to 0, init
 
-    EPWM_setCounterCompareValue(gEpwmBaseAddrIRC, EPWM_COUNTER_COMPARE_A, 0);      
-    EPWM_setCounterCompareValue(gEpwmBaseAddrIRC, EPWM_COUNTER_COMPARE_B, PWM_PRD/2); 
+    EPWM_setCounterCompareValue(gEpwmBaseAddrIRC, EPWM_COUNTER_COMPARE_A, 0);       //set comp a to 0 for 50% duty
+    EPWM_setCounterCompareValue(gEpwmBaseAddrIRC, EPWM_COUNTER_COMPARE_B, PWM_PRD/2);   //set comp b to 90° phase shift
 
     EPWM_setActionQualifierAction(gEpwmBaseAddrIRC, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH,  EPWM_AQ_OUTPUT_ON_TIMEBASE_ZERO);
     EPWM_setActionQualifierAction(gEpwmBaseAddrIRC, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_PERIOD);

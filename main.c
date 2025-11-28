@@ -6,7 +6,6 @@
 #include "ti_drivers_open_close.h"
 #include "ti_board_open_close.h"
 
-#define BOARD_1
 
 // prototypyzde 
 void epwm_updown(void *args);
@@ -14,12 +13,12 @@ void epwm_updown_close(void);           //konec epwm mainu
 uint16_t ecap_poll_close(void);         //konec ecapu
 uint16_t ecap_poll_init(void);          //zacatek ecapu
 void irc_out_go(void);                  //irc, go!
-float ecap_poll_f_hz(void); 
-int32_t eqep_freq(void);
-void eqep_close(void);
-void eqep_speed_dir_init(void *args);
-void pwm_conv_gen(void);
-void submissive_gen(void);
+float ecap_poll_f_hz(void);         //frekvence z ecapu
+int32_t eqep_freq(void);               //frekvence z eqepu
+void eqep_close(void);                 //konec eqepu
+void eqep_speed_dir_init(void *args);   //zacatek eqepu
+void pwm_conv_gen(void);               //pwm konvertoru generátor
+void submissive_gen(void);              //pwm konvertoru generátor
 void pwm_5p_off10(bool true_for_shift); //rozjede pwmku a po 3s sync s gpio65
 void pwm_5p_off10_2(bool true_for_shift); //rozjede pwmku a po 3s sync s gpio65
 
@@ -27,50 +26,41 @@ void pwm_5p_off10_2(bool true_for_shift); //rozjede pwmku a po 3s sync s gpio65
 
 int main(void)
 {    
-    System_init();
-    Board_init();
-    Drivers_open();    //open drivers for console, uart, init board
-    Board_driversOpen();
+    System_init();                      // Initialize the system
+    Board_init();                       // Initialize the board
+    Drivers_open();                     //open drivers for console, uart, etc.
+    Board_driversOpen();                //open board drivers, pinmux, etc.
     DebugP_log("board inited\n");
 
-    #if defined (BOARD_1)
+    //inits and starts:
+    epwm_updown(NULL);
+    irc_out_go();
+    ecap_poll_init();
+    eqep_speed_dir_init(NULL);
+    pwm_conv_gen();
+    submissive_gen();
+    pwm_5p_off10(false);
+    int32_t f_irc = eqep_freq();
+    float f = ecap_poll_f_hz();
+    DebugP_log("freq:  %f \n", f);
+    DebugP_log("freq_irc  %i \n", f_irc); 
 
-        epwm_updown(NULL);
-        irc_out_go();
-        ecap_poll_init();
-        eqep_speed_dir_init(NULL);
-        pwm_conv_gen();
-        submissive_gen();
+    //posledni zkoušene:
+    pwm_5p_off10_2(false);
 
-        pwm_5p_off10(false);
-        pwm_5p_off10_2(false);
+    DebugP_log("running to infinity\n");
+    while (1) ClockP_sleep(1);  //infinite loop
 
-        DebugP_log("running to infinity\n");
-
-        int32_t f_irc = eqep_freq();
-        float f = ecap_poll_f_hz();
-
-        DebugP_log("freq:  %f \n", f);
-        DebugP_log("freq_irc  %i \n", f_irc);
-
-        while (1) ClockP_sleep(1);
-
-        ecap_poll_close();
-        epwm_updown_close();
-        eqep_close();
-
-    #else
-        //na boardu 2 jenom generovat neustále pulsiky
-        epwm_updown(NULL); 
-
-    #endif
-
-       Board_driversClose();
-       Drivers_close();
-       Board_deinit();
-       DebugP_log("board closed\n");
-       System_deinit();
-       DebugP_log("sys closed\n");
+    //closes:
+    ecap_poll_close();
+    epwm_updown_close();
+    eqep_close();
+    oard_driversClose();
+    Drivers_close();
+    Board_deinit();
+    DebugP_log("board closed\n");
+    System_deinit();
+    DebugP_log("sys closed\n");
 
     return 0;
 }
@@ -102,4 +92,5 @@ int main(void)
  * EPWM 5A/5B -> F2 / G2 -> HSEC 61 / 63 -> J21_7 / J21_8 (generuje 5% pulsy 50kHz)
  * GPIO65 -> H1 -> HSEC 86 -> J21_18 (input pro signal 50kHz)
  * - CONFIG_INPUT_XBAR4 GPIO65 INPUT_XBAR_4
+ * ePWM6A/B -> E1 / F3 -> HSEC 58 / 60 -> J21_5 / J21_6  (same functionality, checking multiple synchro)
  */

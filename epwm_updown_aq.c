@@ -22,6 +22,8 @@
  * 
  * ePWM1A and B identical functions - but timebase shifted 5% behind 
  * nastavení těchto funkcí v .syscfg
+ * Internal Connections \n
+ * EPWM 1A/1B -> D3 / D2 -> HSEC 53 / 55 -> J20_3 / J20_4 
  *
  */
 
@@ -30,12 +32,14 @@
 
 //H bridge:
 // prd = F_ 1/f /2 /prsc , 400Mhz / 50kHz /2 /2 = 2000
-#define EPWM_TIMER_TBPRD    1000// Period register, prd je vrcholová hodnota - ? - toto nastaveno v syscfg EPWM Time Base, zdejší dále nepoužito
+#define EPWM_TIMER_TBPRD    1000// Period register, prd je vrcholová hodnota - ? - toto nastaveno v 
+                                // syscfg EPWM Time Base, zdejší dále nepoužito
 #define EPWM_WIDTH          EPWM_TIMER_TBPRD/2 //čtvrztin periody je puls 
 
 //USM:
-#define OFFSET_TICS     EPWM_TIMER_TBPRD/10 // synchro s hbr ale o 5%T posunuto PŘED něj - toto nastaveno v syscfg EPWM Time Base Initial Counter Value, zdejší nepoužito
-
+#define OFFSET_TICS     EPWM_TIMER_TBPRD/10 // synchro s hbr ale o 5%T posunuto PŘED něj - toto 
+                                            // nastaveno v syscfg EPWM Time Base Initial Counter 
+                                            // Value, zdejší nepoužito
 
 //proměnné:
 volatile uint16_t compAVal0, compBVal0, compAVal1, compBVal1;         //CMPA CMPB pro epwm 0a1
@@ -46,9 +50,21 @@ uint32_t gEpwm1Base = CONFIG_EPWM1_BASE_ADDR;   //base adresu epwm USM si vezmi 
 
 //prototypy:
 static void App_epwmIntrISR_0(void *handle);    //zatim je to jen pro clear int
-static void App_epwmIntrISR_1(void *handle);
+static void App_epwmIntrISR_1(void *handle);    //zatim je to jen pro clear int
 
+//funkce:
 
+/*
+ * epwm_updown - Configures and starts EPWM0 and EPWM1 in up-down count mode
+ *               with Action Qualifier to generate PWM on EPWMA and EPWMB outputs.
+ *               EPWM1 is time base shifted by 5% of period behind EPWM0.  
+ *               EPWM0A/B -> C4 / C3 -> HSEC 49 / 51 -> J20_1 / J20_2 (H Bridge)
+ *               EPWM1A/B -> D3 / D2 -> HSEC 53 / 55 -> J20_3 / J20_4 (USM)
+ *
+ * Note: Set up SYSCFG for EPWM0 and EPWM1, initialize epwms, enable global loads, interrupts,
+ *       set comps and period as needed, prescaler to 1 implicit is 2?), up-down mode, all in syscfg.
+ *
+ */
 void epwm_updown(void *args)
 {
     int32_t  status;            //status
@@ -61,8 +77,7 @@ void epwm_updown(void *args)
     DebugP_log("EPWMTest Started ...\r\n");
     DebugP_log("EPWM Action Qualifier Module using tadytenbordel\r\n");
 
-    SOC_setMultipleEpwmTbClk(epwmsMask, FALSE);     // Disabling tbclk sync for EPWM 0 for configuration // for 0 1 2 epwms
-
+    SOC_setMultipleEpwmTbClk(epwmsMask, FALSE);     // Disabling tbclk sync for EPWM 0 for configuration
 
     // EPWM0 register and enable interrupt:
     HwiP_Params_init(&hwiPrms_0);
@@ -90,8 +105,9 @@ void epwm_updown(void *args)
     EPWM_clearEventTriggerInterruptFlag(gEpwm0Base);            //Clear any pending interrupts if any
     EPWM_clearEventTriggerInterruptFlag(gEpwm1Base);
 
-    SOC_setMultipleEpwmTbClk(epwmsMask, TRUE);      //Enabling tbclk sync for EPWM 0 after configurations, i pro epwm1
+    SOC_setMultipleEpwmTbClk(epwmsMask, TRUE);      //Enabling tbclk sync for EPWM 0,1 after confg
 
+    //get comp values for debug output:
     compAVal0 = EPWM_getCounterCompareValue(gEpwm0Base, EPWM_COUNTER_COMPARE_A);
     compAVal1 = EPWM_getCounterCompareValue(gEpwm1Base, EPWM_COUNTER_COMPARE_A);
     compBVal0 = EPWM_getCounterCompareValue(gEpwm0Base, EPWM_COUNTER_COMPARE_B);
@@ -101,10 +117,12 @@ void epwm_updown(void *args)
 
 }
 
-//konec mainu
+/*
+ * epwm_updown_close - Closes the EPWM0 and EPWM1 drivers, shows debug info
+ */
 void epwm_updown_close(void)
 {
-    DebugP_log("epwm0: CMPA: %i, CMPB: %i \r\n", compAVal0, compBVal0); //kontrolní 
+    DebugP_log("epwm0: CMPA: %i, CMPB: %i \r\n", compAVal0, compBVal0); //kontrolní vypis
     DebugP_log("epwm1: CMPA: %i, CMPB: %i \r\n", compAVal1, compBVal1);
 
     DebugP_log("EPWM Action Qualifier Module Test Passed!!\r\n");
@@ -113,11 +131,18 @@ void epwm_updown_close(void)
 }
 
 //interrupt service rutina - vezmi cmpam hodnoty, narvi je do vypisu, vyčisti přerušení
+
+/* 
+ * App_epwmIntrISR_0 - ISR for EPWM0, clears ET interrupt
+ */
 static void App_epwmIntrISR_0(void *handle)
 {
     EPWM_clearEventTriggerInterruptFlag(gEpwm0Base);     // Clear any pending interrupts if any
 }
 
+/* 
+ * App_epwmIntrISR_1 - ISR for EPWM1, clears ET interrupt
+ */
 static void App_epwmIntrISR_1(void *handle)
 {
     EPWM_clearEventTriggerInterruptFlag(gEpwm1Base);     // Clear any pending interrupts if any
