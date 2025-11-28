@@ -27,11 +27,13 @@
  * freq : Simulated quadrature signal frequency measured by counting the external input pulses for UNIT_PERIOD (set v syscfgu) i zde
  * dir : Indicates clockwise (1) or anticlockwise (-1)
  *
- *	EQEP: EQEPxA Pin(EQEP0_A) B14 a EQEPxB Pin(EQEP0_B) A14 - gpio 130 a 131
+ *	EQEP: EQEP0_A / EQEP0_B -> B14 / A14 -> gpio 130 / 131 -> HSEC 102 / 100 -> J21_25 / J21_24
  * 
  * Internal Connections \n
- * - ePWM2A -> C2 -> GPIO47 -> INPUTXBAR1 -> PWMXBAR1 -> eQEP0A
- * - ePWM2B -> C1 -> GPIO48 -> INPUTXBAR2 -> PWMXBAR2 -> eQEP0B
+ * - GPIO130 ->  eQEP0A , GPIO131 ->  eQEP0B (setup in syscfg as input of eqep, not issued gpio. přes xbary se vede jen EQEP index and strobe)
+ *
+ * Needs to have external connection to the source of q signal:
+ * ePWM → PIN (output) → fyzický drát → PIN (input) → INPUTXBAR → EQEP
  * 
  * 1X Resolution: Count rising edge only
  * emulation: Counter unaffected by suspend
@@ -40,16 +42,15 @@
  * Position Counter Mode: Reset position on a unit time event
  * enable unit timer and Unit Timer Period : 2000000
  * INT XBAR		CONFIG_INT_XBAR0	EQEP0_INT	INT_XBAR_0 	woe
- * INPUT XBAR naroutovat na EPWMXBAR (v epwmxbar, input xbary se vytvoří samy)
  * quadrature mode je tam implicitně
  * 
- * snad jsem nastavil směr správně, ještě zkontrolovat
- * 
+ * EQEP na AM263Px neumí vzít signál z EPWM interně!
+ * SysCfg NEUMÍ udělat ePWM → INPUT XBAR → PWM XBAR → EQEP
  */
 
 
 // Defines:
-#define DEVICE_SYSCLK_FREQ  (uint32_t)(2e8) // Sysclk frequence 2MHz
+#define DEVICE_SYSCLK_FREQ  (uint32_t)(2e8) // Sysclk frequence 200MHz
 #define APP_INT_IS_PULSE  (1U) // Macro for interrupt pulse
 #define UNIT_PERIOD  (uint32_t)(DEVICE_SYSCLK_FREQ / 1e3) // period timer value, at which timer-out interrupt is set, takže na 1ms: 2e8 / 1e3 = 2e5
 #define QUAD_TIC 4U //Quadrature-clock mode
@@ -123,7 +124,7 @@ void eqep_close(void)
 	}
     else 
     {
-        DebugP_log("AAAAAAAAAAAAAAAA HELP \r\n");   //it should return 0 as counterclockwise?
+        DebugP_log("AAAAAAAAAAAAAAAA HELP \r\n");   //it should return dir = 0 as counterclockwise?
 
     }
 
@@ -157,22 +158,31 @@ static void App_eqepISR(void *handle)
 
     gDir = EQEP_getDirection(gEqepBaseAddr);    // Gets direction of rotation of motor 
 
-   if (gDir > 0 ){
-        // Forward direction: use gNewcount as-is
-        }
-   else {
-            // Reverse direction: convert to magnitude (dvojkovy doplněk)
-            gNewcount = (0xFFFFFFFF - gNewcount) + 1;
-        }
-
-   gOldcount = gNewcount;    // Stores the current position count value to oldcount variable 
-
    // gFreq Calculation:
    // gNewcount = position pulses accumulated in UNIT_PERIOD (1 ms by default)
    // UNIT_PERIOD = 2e5 ticks at 200 MHz sysclock = 1 ms
    // gFreq [pulses/sec] = gNewcount [pulses/ms] * (1e3 ms/sec)
-   // Simplified: gFreq = gNewcount * 1000
-   gFreq = (int32_t)(gNewcount * 1000 / QUAD_TIC );
+    gFreq = (int32_t)((int64_t)gNewcount * 1000 / QUAD_TIC);
    
    EQEP_clearInterruptStatus(gEqepBaseAddr,EQEP_INT_UNIT_TIME_OUT|EQEP_INT_GLOBAL);    // Clear interrupt flag
 }
+
+/*
+AM263Px má tyto XBAR typy:
+    INPUT XBAR
+    PWM XBAR
+    HRCAP XBAR
+    DMAXBAR (pro DMA triggery)
+    INT XBAR (interrupt router)
+INPUT XBAR – funguje JEN jako GPIO→Periferie. K přivedení externího signálu z pinu do vybraných modulů: EQEP, ECAP, EPWM sync-in, CMPSS, SDFM, případně další modulo (?)
+- Co může být zdroj INPUT XBAR? Pouze GPIO piny (0–191), NIC JIN0HO!        GPIOx → INPUT XBAR → EQEP / ECAP / EPWM / SDFM / CMPSS
+PWM XBAR – funguje JEN jako periferie→GPIO . Možné zdroje: EPWM tzv. Trip signals, CMPSS, DCAEVT/DCBEVT, INPUTXBAR (tj. zase GPIO), některé další interní zdroje
+- PWMXBAROUT → EQEP, PWMXBAROUT → INPUTXBAR, PWMXBAROUT → ECAP, PWMXBAROUT → EPWM (kromě trip)
+INT XBAR — pouze na routování interruptů (mapuje vnitřní zdroje do CPU IRQ linek)
+
+původní přístup nefungoval, tzn vyvedu na jeden pin a z toho samého čtu pres crossbary. AM263Px GPIO pin nemá interní loopback. 
+Tzn: když nastavim pin jako výstup (EPWM1_A), nejdee současně číst jeho logickou hodnotu dovnitř přes INPUT XBAR.
+Přímo nelze poslat signál z epwm do eqep. 
+A TI to v dokumentaci (TRM) uvádí nepřímo, nebo tak divně prostě, ale GUI syscfgu mne k tomu nepustí, jak bych chtěl. 
+takhle přes externí piny je to stejně užitečnější modelová sotuace. 
+*/

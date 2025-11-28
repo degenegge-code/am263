@@ -16,6 +16,8 @@ TODO:
 - Ověřit čtení čidla polohy, které hodnotu předává asynchronní nebo synchronní komunikací. Tj. buď použít UART pro asynchronní komunikaci. Chceme nulovou spotřebu CPU. Tj. nastavit UART, aby příchozí hodnoty ukládal přes sebe na jedno místo, které budeme číst.  Pokud je komunikace synchronní, tak použít SPI jednotku a nebo PRU-ICSSG (pokud ta sběrnice bude nějaká divná).
 - deadtimy
 
+- ADC čtení pomocí compC/D
+- sync přes sync signál vyveden externě. jeslti nebude rychlejší, než synchro na hranu
 
 
 WTFS:

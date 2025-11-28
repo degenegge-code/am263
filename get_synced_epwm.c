@@ -81,7 +81,7 @@ static void App_genISR(void *handle);       //ISR pro generátor sinu
                     edge, internally. EPWM4A/B -> D1 / E4 -> HSEC 57 / 59 -> J21_5 / J21_6   
  * Note: set up syscfg for epwm3 syncout, initialize epwms, enable global loads
  */
-void submissive_gen(void)
+void submissive_gen(bool true_for_osc)
 {
     DebugP_log("submissive_gen \n");    
 
@@ -138,10 +138,15 @@ void submissive_gen(void)
 
     DebugP_log("submissive_gen of cos 1kHz (fsw 10kHz) \n");
 
-    //for exemplar display on oscilloscope uncomment: 
-    //DebugP_log("submissive_gen: press single on oscilloscope\n"); 
-    //ClockP_sleep(3);      //so you can see the waveform before sync starts
-
+    //for exemplar display on oscilloscope: 
+    if (true_for_osc)
+    {
+        DebugP_log("submissive_gen: press single on oscilloscope\n"); 
+        ClockP_sleep(3);      //so you can see the waveform before sync starts
+    }
+    else {
+        //nic
+    }
     EPWM_enablePhaseShiftLoad(gEpwmBaseAddr4);  //need this
     EPWM_setPhaseShift(gEpwmBaseAddr4, 0);      //zero phase shift, sync on rising edge
     EPWM_setSyncInPulseSource(gEpwmBaseAddr4, EPWM_SYNC_IN_PULSE_SRC_SYNCOUT_EPWM3); //sync to epwm3
@@ -179,7 +184,7 @@ static void App_genISR(void *handle)
  * Note: set up syscfg for inputxbar out4 to be connected to ePWM5 syncin, set initialize epwm5, e
  *       nable global loads, dont need interrupt, set comps and period as needed, well set everything there
  */
-void pwm_5p_off10(bool true_for_shift)
+void pwm_5p_off10(bool true_for_shift, bool true_for_osc)
 {
     DebugP_log("pwm_5p_off10\r\n");
 
@@ -195,8 +200,6 @@ void pwm_5p_off10(bool true_for_shift)
     // nebylo by spolehlivější? pin -> eCAP -> XBAR -> ePWM SYNCI
     // možná ano, ale tohle jednoduché funguje perfektně
 
-    DebugP_log("pwm_5p_off10: press single on oscilloscope \n");
-
     EPWM_enablePhaseShiftLoad(gEpwmBaseAddr5);  //need this
     if (true_for_shift)
     {
@@ -207,8 +210,14 @@ void pwm_5p_off10(bool true_for_shift)
         EPWM_setPhaseShift(gEpwmBaseAddr5, 0);    //zero phase shift, sync on rising edge, but with offset in inputxbar
     }
 
-    ClockP_sleep(3);    //to see unsynced waveform press single on scope and then compare after 3secs
-
+    if(true_for_osc)
+    {
+        DebugP_log("pwm_5p_off10: press single on oscilloscope \n");
+        ClockP_sleep(3);    //to see unsynced waveform press single on scope and then compare after 3secs
+    }
+    else {
+    //nic
+    }
     EPWM_setSyncInPulseSource(gEpwmBaseAddr5, EPWM_SYNC_IN_PULSE_SRC_INPUTXBAR_OUT4);  //inputxbar pouze 4 a 20!
     DebugP_log("pwm_5p_off10: pwm5 externally synced \n");
 
@@ -227,18 +236,21 @@ void pwm_5p_off10(bool true_for_shift)
  * Note: set up syscfg for inputxbar out4 to be connected to ePWM6 syncin, set initialize epwm6,
  * enable global loads, dont need interrupt, set comps and period as needed, well set everything there
  */
-void pwm_5p_off10_2(bool true_for_shift)
+void pwm_5p_off10_2(bool true_for_shift, bool true_for_osc)
 {
     DebugP_log("pwm_5p_off10_2\r\n");
     EPWM_setCounterCompareValue(gEpwmBaseAddr6, EPWM_COUNTER_COMPARE_A, PULSE_WIDTH);
     EPWM_setCounterCompareValue(gEpwmBaseAddr6, EPWM_COUNTER_COMPARE_B, PWM_PRD_2 - PULSE_WIDTH);
     EPWM_setTimeBasePeriod(gEpwmBaseAddr6, PWM_PRD_2);
     EPWM_clearEventTriggerInterruptFlag(gEpwmBaseAddr6); 
-    DebugP_log("pwm_5p_off10_2: press single on oscilloscope \n");
     EPWM_enablePhaseShiftLoad(gEpwmBaseAddr6);
     if (true_for_shift) EPWM_setPhaseShift(gEpwmBaseAddr6, OFFSET_TICS_2);  
     else EPWM_setPhaseShift(gEpwmBaseAddr6, 0); 
-    ClockP_sleep(3);
+    if(true_for_osc)
+    {
+        DebugP_log("pwm_5p_off10_2: press single on oscilloscope \n");
+        ClockP_sleep(3);    
+    }
     EPWM_setSyncInPulseSource(gEpwmBaseAddr6, EPWM_SYNC_IN_PULSE_SRC_INPUTXBAR_OUT4);
     DebugP_log("pwm_5p_off10_2: pwm6 externally synced \n");
 }

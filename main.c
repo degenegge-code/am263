@@ -18,9 +18,9 @@ int32_t eqep_freq(void);               //frekvence z eqepu
 void eqep_close(void);                 //konec eqepu
 void eqep_speed_dir_init(void *args);   //zacatek eqepu
 void pwm_conv_gen(void);               //pwm konvertoru generátor
-void submissive_gen(void);              //pwm konvertoru generátor
-void pwm_5p_off10(bool true_for_shift); //rozjede pwmku a po 3s sync s gpio65
-void pwm_5p_off10_2(bool true_for_shift); //rozjede pwmku a po 3s sync s gpio65
+void submissive_gen(bool true_for_osc);              //pwm konvertoru generátor
+void pwm_5p_off10(bool true_for_shift, bool true_for_osc); //rozjede pwmku a po 3s sync s gpio65, když true_for_osc
+void pwm_5p_off10_2(bool true_for_shift, bool true_for_osc); //rozjede pwmku a po 3s sync s gpio65, když true_for_osc
 
 
 
@@ -36,26 +36,30 @@ int main(void)
     epwm_updown(NULL);
     irc_out_go();
     ecap_poll_init();
-    eqep_speed_dir_init(NULL);
     pwm_conv_gen();
-    submissive_gen();
-    pwm_5p_off10(false);
-    int32_t f_irc = eqep_freq();
+    submissive_gen(false);
+    pwm_5p_off10(false, false);
     float f = ecap_poll_f_hz();
     DebugP_log("freq:  %f \n", f);
-    DebugP_log("freq_irc  %i \n", f_irc); 
+    pwm_5p_off10_2(false, false);
 
     //posledni zkoušene:
-    pwm_5p_off10_2(false);
+    eqep_speed_dir_init(NULL);
+
 
     DebugP_log("running to infinity\n");
-    while (1) ClockP_sleep(1);  //infinite loop
+    while (1) 
+    {
+        int32_t f_irc = eqep_freq();
+        ClockP_sleep(1);
+        DebugP_log("freq_irc  %i \n", f_irc); 
+    }
 
     //closes:
     ecap_poll_close();
     epwm_updown_close();
     eqep_close();
-    oard_driversClose();
+    Board_driversClose();
     Drivers_close();
     Board_deinit();
     DebugP_log("board closed\n");
@@ -82,8 +86,7 @@ int main(void)
  * "IRC": EPWM 2A/2B -> C2 / C1 -> HSEC 50 / 52 -> J21_1 / J21_2 (generuju 50/50 bez přerušení 200kHz, b je posunuto o 90°)
  * - ePWM2A -> GPIO47 -> INPUTXBAR1 -> PWMXBAR1 
  * - ePWM2B -> GPIO48 -> INPUTXBAR2 -> PWMXBAR2 
- * EQEP: EQEPxA Pin(EQEP0_A) B14 a EQEPxB Pin(EQEP0_B) A14 
- * - QEPA Source: Signal comes from PWM Xbar out 1, QEPB Source: Signal comes from PWM Xbar out 2
+ * EQEP: EQEP0_A / EQEP0_B -> B14 / A14 -> gpio 130 / 131 -> HSEC 102 / 100 -> J21_25 / J21_24
  * - INT_XBAR_2 (EQEP0_INT - isr get dir, get pos)
  * EPWM 3A/3B -> E3 / E2 -> HSEC 54 / 56 -> J21_3 / J21_4 (generuje up, komplemtární a/b uměle, moduluje sin)
  * - INT_XBAR_3 (přerušení na isr pwmky, modulace)
