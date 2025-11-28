@@ -3,6 +3,7 @@
 #include <kernel/dpl/SemaphoreP.h>
 #include <kernel/dpl/HwiP.h>
 #include <drivers/epwm.h>
+#include <drivers/adc.h>
 #include "ti_drivers_config.h"
 
 /*
@@ -25,6 +26,10 @@
  * Internal Connections \n
  * EPWM 1A/1B -> D3 / D2 -> HSEC 53 / 55 -> J20_3 / J20_4 
  *
+ * ADC0 -> V15 -> HSEC 9 -> J6_1 
+ * SOC 0 is triggered by ePWM0 CMPC and CMPD both in up and down, set in epwm syscfg
+ * EPWM0 triggruje na každém CMPC, CMPD, kde si šahá pro hodnoty do ADC
+ * - up to 16 SOCs can be triggered by ePWMs, 80 ns sample time 
  */
 
 #define APP_INT_IS_PULSE    (1U)
@@ -33,7 +38,7 @@
 //H bridge:
 // prd = F_ 1/f /2 /prsc , 400Mhz / 50kHz /2 /2 = 2000
 #define EPWM_TIMER_TBPRD    1000// Period register, prd je vrcholová hodnota - ? - toto nastaveno v 
-                                // syscfg EPWM Time Base, zdejší dále nepoužito
+                                // syscfg EPWM Time Base
 #define EPWM_WIDTH          EPWM_TIMER_TBPRD/2 //čtvrztin periody je puls 
 
 //USM:
@@ -42,11 +47,13 @@
                                             // Value, zdejší nepoužito
 
 //proměnné:
-volatile uint16_t compAVal0, compBVal0, compAVal1, compBVal1;         //CMPA CMPB pro epwm 0a1
+volatile uint16_t compAVal0, compBVal0, compAVal1, compBVal1, compCVal0, compDVal0; 
 static HwiP_Object  gEpwmHwiObject_0;           //objekt h bridge
 static HwiP_Object  gEpwmHwiObject_1;           //objekt usm
 uint32_t gEpwm0Base = CONFIG_EPWM0_BASE_ADDR;   //base adresu epwm H bridge si vezmi z konfigu
 uint32_t gEpwm1Base = CONFIG_EPWM1_BASE_ADDR;   //base adresu epwm USM si vezmi z konfigu
+static uint32_t gVals[8] = 33u;                 // proměnná čtení z adc, sliding average
+static uint32_t i = 0;
 
 //prototypy:
 static void App_epwmIntrISR_0(void *handle);    //zatim je to jen pro clear int
@@ -60,6 +67,8 @@ static void App_epwmIntrISR_1(void *handle);    //zatim je to jen pro clear int
  *               EPWM1 is time base shifted by 5% of period behind EPWM0.  
  *               EPWM0A/B -> C4 / C3 -> HSEC 49 / 51 -> J20_1 / J20_2 (H Bridge)
  *               EPWM1A/B -> D3 / D2 -> HSEC 53 / 55 -> J20_3 / J20_4 (USM)
+ *               EPWM1 interrupts at bottom, every third
+ *               EPWM0 interrupts at every CMPC/D, runs SOC
  *
  * Note: Set up SYSCFG for EPWM0 and EPWM1, initialize epwms, enable global loads, interrupts,
  *       set comps and period as needed, prescaler to 1 implicit is 2?), up-down mode, all in syscfg.
@@ -105,6 +114,9 @@ void epwm_updown(void *args)
     EPWM_clearEventTriggerInterruptFlag(gEpwm0Base);            //Clear any pending interrupts if any
     EPWM_clearEventTriggerInterruptFlag(gEpwm1Base);
 
+    EPWM_setCounterCompareValue(gEpwm0Base, EPWM_COUNTER_COMPARE_C, 3*EPWM_TIMER_TBPRD/4);    //uprostřed pulsu
+    EPWM_setCounterCompareValue(gEpwm0Base, EPWM_COUNTER_COMPARE_D, EPWM_TIMER_TBPRD/4);    
+
     SOC_setMultipleEpwmTbClk(epwmsMask, TRUE);      //Enabling tbclk sync for EPWM 0,1 after confg
 
     //get comp values for debug output:
@@ -112,7 +124,8 @@ void epwm_updown(void *args)
     compAVal1 = EPWM_getCounterCompareValue(gEpwm1Base, EPWM_COUNTER_COMPARE_A);
     compBVal0 = EPWM_getCounterCompareValue(gEpwm0Base, EPWM_COUNTER_COMPARE_B);
     compBVal1 = EPWM_getCounterCompareValue(gEpwm1Base, EPWM_COUNTER_COMPARE_B);
-
+    compCVal0 = EPWM_getCounterCompareValue(gEpwm0Base, EPWM_COUNTER_COMPARE_C);
+    compDVal0 = EPWM_getCounterCompareValue(gEpwm0Base, EPWM_COUNTER_COMPARE_D);
     DebugP_log("epwms set\n");
 
 }
@@ -123,6 +136,8 @@ void epwm_updown(void *args)
 void epwm_updown_close(void)
 {
     DebugP_log("epwm0: CMPA: %i, CMPB: %i \r\n", compAVal0, compBVal0); //kontrolní vypis
+    DebugP_log("       CMPC: %i, CMPD: %i \r\n", compCVal0, compDVal0); //kontrolní vypis
+
     DebugP_log("epwm1: CMPA: %i, CMPB: %i \r\n", compAVal1, compBVal1);
 
     DebugP_log("EPWM Action Qualifier Module Test Passed!!\r\n");
@@ -133,10 +148,14 @@ void epwm_updown_close(void)
 //interrupt service rutina - vezmi cmpam hodnoty, narvi je do vypisu, vyčisti přerušení
 
 /* 
- * App_epwmIntrISR_0 - ISR for EPWM0, clears ET interrupt
+ * App_epwmIntrISR_0 - ISR for EPWM0, reads ADC, clears interrup
  */
 static void App_epwmIntrISR_0(void *handle)
 {
+    gVals[i] = ADC_readResult(ADC_RESULT0, ADC_SOC_NUMBER0);    //dej to buffer
+
+    if (i<7) i++;
+    else i=0;
     EPWM_clearEventTriggerInterruptFlag(gEpwm0Base);     // Clear any pending interrupts if any
 }
 
@@ -146,6 +165,11 @@ static void App_epwmIntrISR_0(void *handle)
 static void App_epwmIntrISR_1(void *handle)
 {
     EPWM_clearEventTriggerInterruptFlag(gEpwm1Base);     // Clear any pending interrupts if any
+}
+
+uint32_t get_buffval()
+{
+    //vyčtení z bufferu, pruměr
 }
 
 

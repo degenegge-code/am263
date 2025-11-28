@@ -48,7 +48,7 @@ int main(void)
 
 
     DebugP_log("running to infinity\n");
-    while (1) 
+    for(int i = 0; i<5; i++)
     {
         int32_t f_irc = eqep_freq();
         ClockP_sleep(1);
