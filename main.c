@@ -21,6 +21,7 @@ void pwm_conv_gen(void);               //pwm konvertoru generátor
 void submissive_gen(bool true_for_osc);              //pwm konvertoru generátor
 void pwm_5p_off10(bool true_for_shift, bool true_for_osc); //rozjede pwmku a po 3s sync s gpio65, když true_for_osc
 void pwm_5p_off10_2(bool true_for_shift, bool true_for_osc); //rozjede pwmku a po 3s sync s gpio65, když true_for_osc
+void adc_debug(void);       //prints adc values
 
 
 
@@ -28,6 +29,7 @@ int main(void)
 {    
     System_init();                      // Initialize the system
     Board_init();                       // Initialize the board
+
     Drivers_open();                     //open drivers for console, uart, etc.
     Board_driversOpen();                //open board drivers, pinmux, etc.
     DebugP_log("board inited\n");
@@ -42,18 +44,19 @@ int main(void)
     float f = ecap_poll_f_hz();
     DebugP_log("freq:  %f \n", f);
     pwm_5p_off10_2(false, false);
+    eqep_speed_dir_init(NULL);
+    int32_t f_irc = eqep_freq();
+    //ClockP_sleep(1);
+    DebugP_log("freq_irc  %i \n", f_irc); 
 
     //posledni zkoušene:
-    eqep_speed_dir_init(NULL);
+    while (1) {
+        adc_debug();
 
-
-    DebugP_log("running to infinity\n");
-    for(int i = 0; i<5; i++)
-    {
-        int32_t f_irc = eqep_freq();
-        ClockP_sleep(1);
-        DebugP_log("freq_irc  %i \n", f_irc); 
     }
+
+
+    //DebugP_log("running to infinity\n");
 
     //closes:
     ecap_poll_close();
@@ -96,4 +99,7 @@ int main(void)
  * GPIO65 -> H1 -> HSEC 86 -> J21_18 (input pro signal 50kHz)
  * - CONFIG_INPUT_XBAR4 GPIO65 INPUT_XBAR_4
  * ePWM6A/B -> E1 / F3 -> HSEC 58 / 60 -> J21_5 / J21_6  (same functionality, checking multiple synchro)
+ * ADC1 -> HSEC 12 -> ADC1_AIN0 -> J12_1 
+ * - EPWM0 SOCs ADC1
+ * - SW9.1 1-2 a SW9.2 4-5 je VREFLO
  */

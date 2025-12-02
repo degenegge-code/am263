@@ -26,10 +26,16 @@
  * Internal Connections \n
  * EPWM 1A/1B -> D3 / D2 -> HSEC 53 / 55 -> J20_3 / J20_4 
  *
- * ADC0 -> V15 -> HSEC 9 -> J6_1 
+ * ADC1 -> HSEC 12 -> ADC1_AIN0 -> J12_1
  * SOC 0 is triggered by ePWM0 CMPC and CMPD both in up and down, set in epwm syscfg
  * EPWM0 triggruje na každém CMPC, CMPD, kde si šahá pro hodnoty do ADC
  * - up to 16 SOCs can be triggered by ePWMs, 80 ns sample time 
+ * IMPORTANT: ADC REF HAS TO BE SET ON-BOARD CORRECTLY (for this set SW9.1 1-2 and SW9.2 4-5)
+ * 
+ pozn:
+ * V14 = ADC_VREFHI_G0, V13 = ADC_VREFLO_G0 nejsou na hsecu
+ * V15 = ADC0_AIN0 (taky T5? tf) -> HSEC 9 -> J6_1 -> asi defaulktně nastavenej jako DAC
+ * 
  */
 
 #define APP_INT_IS_PULSE    (1U)
@@ -37,12 +43,16 @@
 
 //H bridge:
 // prd = F_ 1/f /2 /prsc , 400Mhz / 50kHz /2 /2 = 2000
-#define EPWM_TIMER_TBPRD    1000// Period register, prd je vrcholová hodnota - ? - toto nastaveno v 
+#define EPWM_TIMER_TBPRD    1000u// Period register, prd je vrcholová hodnota - ? - toto nastaveno v 
                                 // syscfg EPWM Time Base
-#define EPWM_WIDTH          EPWM_TIMER_TBPRD/2 //čtvrztin periody je puls 
+#define EPWM_WIDTH          EPWM_TIMER_TBPRD/2u //čtvrztin periody je puls 
+
+//ADC:
+#define BUFF_LEN    16u
+#define VREF        3.3
 
 //USM:
-#define OFFSET_TICS     EPWM_TIMER_TBPRD/10 // synchro s hbr ale o 5%T posunuto PŘED něj - toto 
+#define OFFSET_TICS     EPWM_TIMER_TBPRD/10u // synchro s hbr ale o 5%T posunuto PŘED něj - toto 
                                             // nastaveno v syscfg EPWM Time Base Initial Counter 
                                             // Value, zdejší nepoužito
 
@@ -52,12 +62,17 @@ static HwiP_Object  gEpwmHwiObject_0;           //objekt h bridge
 static HwiP_Object  gEpwmHwiObject_1;           //objekt usm
 uint32_t gEpwm0Base = CONFIG_EPWM0_BASE_ADDR;   //base adresu epwm H bridge si vezmi z konfigu
 uint32_t gEpwm1Base = CONFIG_EPWM1_BASE_ADDR;   //base adresu epwm USM si vezmi z konfigu
-static uint32_t gVals[8] = 33u;                 // proměnná čtení z adc, sliding average
+static float gVals[BUFF_LEN];                 // proměnná čtení z adc, sliding average
 static uint32_t i = 0;
+uint32_t gAdcBaseAddr = CONFIG_ADC1_BASE_ADDR;
+uint32_t gAdcResultBaseAddr = CONFIG_ADC1_RESULT_BASE_ADDR;
 
 //prototypy:
 static void App_epwmIntrISR_0(void *handle);    //zatim je to jen pro clear int
 static void App_epwmIntrISR_1(void *handle);    //zatim je to jen pro clear int
+float get_buffval(void);
+void reset_buffval(void);
+
 
 //funkce:
 
@@ -68,7 +83,7 @@ static void App_epwmIntrISR_1(void *handle);    //zatim je to jen pro clear int
  *               EPWM0A/B -> C4 / C3 -> HSEC 49 / 51 -> J20_1 / J20_2 (H Bridge)
  *               EPWM1A/B -> D3 / D2 -> HSEC 53 / 55 -> J20_3 / J20_4 (USM)
  *               EPWM1 interrupts at bottom, every third
- *               EPWM0 interrupts at every CMPC/D, runs SOC
+ *               EPWM0 interrupts at every CMPC/D, runs SOC for ADC1
  *
  * Note: Set up SYSCFG for EPWM0 and EPWM1, initialize epwms, enable global loads, interrupts,
  *       set comps and period as needed, prescaler to 1 implicit is 2?), up-down mode, all in syscfg.
@@ -87,6 +102,10 @@ void epwm_updown(void *args)
     DebugP_log("EPWM Action Qualifier Module using tadytenbordel\r\n");
 
     SOC_setMultipleEpwmTbClk(epwmsMask, FALSE);     // Disabling tbclk sync for EPWM 0 for configuration
+
+    SOC_enableAdcReference(0); //this doesnt seem to be that important
+    ADC_enableConverter(gAdcBaseAddr);    //already enabled in syscfg
+    //reset_buffval();    //for first run debug read
 
     // EPWM0 register and enable interrupt:
     HwiP_Params_init(&hwiPrms_0);
@@ -145,16 +164,16 @@ void epwm_updown_close(void)
 
 }
 
-//interrupt service rutina - vezmi cmpam hodnoty, narvi je do vypisu, vyčisti přerušení
-
 /* 
- * App_epwmIntrISR_0 - ISR for EPWM0, reads ADC, clears interrup
+ * App_epwmIntrISR_0 - ISR for EPWM0, reads ADC1 to buffer, clears interrup
  */
 static void App_epwmIntrISR_0(void *handle)
 {
-    gVals[i] = ADC_readResult(ADC_RESULT0, ADC_SOC_NUMBER0);    //dej to buffer
+    uint32_t raw = ADC_readResult(gAdcResultBaseAddr, ADC_SOC_NUMBER0);
+    //původně: chyba: měl by být left aligned, ale dělá se automatický postprocessing??? gVals[i] = (float)(raw>>4) * VREF / 4095.0;  
+    gVals[i] = (float)raw * VREF / 4095.0;   //dej to bufferu a přepočitej
 
-    if (i<7) i++;
+    if (i<(BUFF_LEN-1)) i++;
     else i=0;
     EPWM_clearEventTriggerInterruptFlag(gEpwm0Base);     // Clear any pending interrupts if any
 }
@@ -167,9 +186,36 @@ static void App_epwmIntrISR_1(void *handle)
     EPWM_clearEventTriggerInterruptFlag(gEpwm1Base);     // Clear any pending interrupts if any
 }
 
-uint32_t get_buffval()
+/*
+ * get_buffval - returns the filtered adc value
+ */
+float get_buffval(void)
 {
-    //vyčtení z bufferu, pruměr
+    float sum=0;
+    for (uint32_t j=0; j<BUFF_LEN; j++) sum+=gVals[j];
+    return (sum/BUFF_LEN);
 }
 
+/*
+ * reset_buffval - resets the adc buffer
+ */
+void reset_buffval(void)
+{
+    i=0;
+    for (uint32_t j=0; j<BUFF_LEN; j++) gVals[j]=0;
+}
+
+/*
+ * adc_debug - prints the filtered adc value
+ */
+void adc_debug(void)
+{
+    DebugP_log("ADC read value filtered (SA %u len): %f\r\n", BUFF_LEN, get_buffval());
+    uint32_t raw = ADC_readResult(gAdcResultBaseAddr, ADC_SOC_NUMBER0);
+    DebugP_log("ADC - last raw value %u \r\n", raw);
+    float nig = (float)raw * VREF / 4095.0;  
+    DebugP_log("ADC - last přepočítaná value %f \r\n", nig);
+    ClockP_sleep(1);
+
+}
 

@@ -9,7 +9,7 @@
 /**
  * Import the modules used in this configuration.
  */
-const adc             = scripting.addModule("/drivers/adc/adc", {}, false);
+const adc             = scripting.addModule("/drivers/adc/adc");
 const adc1            = adc.addInstance();
 const ecap            = scripting.addModule("/drivers/ecap/ecap");
 const ecap1           = ecap.addInstance();
@@ -69,11 +69,14 @@ const int_xbar5       = int_xbar.addInstance();
 /**
  * Write custom configuration values to the imported modules.
  */
-adc1.$name            = "CONFIG_ADC0";
-adc1.soc0Trigger      = "ADC_TRIGGER_EPWM0_SOCA";
-adc1.soc1Trigger      = "ADC_TRIGGER_EPWM0_SOCB";
-adc1.enableConverter  = true;
-adc1.ADC.AIN0.$assign = "ADC0_AIN0";
+adc1.soc0Trigger         = "ADC_TRIGGER_EPWM0_SOCA";
+adc1.soc1Trigger         = "ADC_TRIGGER_EPWM0_SOCB";
+adc1.enableTDMA          = false;
+adc1.enableConverter     = true;
+adc1.socHighPriorityMode = "ADC_PRI_SOC0_HIPRI";
+adc1.$name               = "CONFIG_ADC1";
+adc1.ADC.$assign         = "ADC1";
+adc1.ADC.AIN0.$assign    = "ADC1_AIN0";
 
 ecap1.$name               = "CONFIG_ECAP0";
 ecap1.ecapInput           = "ECAP_INPUT_INPUTXBAR0";
@@ -553,11 +556,10 @@ int_xbar5.instance   = "INT_XBAR_4";
  * version of the tool will not impact the pinmux you originally saw.  These lines can be completely deleted in order to
  * re-solve from scratch.
  */
-adc1.ADC.$suggestSolution          = "ADC0";
-adc1.ADC.AIN1.$suggestSolution     = "ADC0_AIN1";
-adc1.ADC.AIN2.$suggestSolution     = "ADC0_AIN2";
-adc1.ADC.AIN3.$suggestSolution     = "ADC0_AIN3";
-adc1.ADC.AIN4.$suggestSolution     = "ADC0_AIN4";
-adc1.ADC.AIN5.$suggestSolution     = "ADC0_AIN5";
+adc1.ADC.AIN1.$suggestSolution     = "ADC1_AIN1";
+adc1.ADC.AIN2.$suggestSolution     = "ADC1_AIN2";
+adc1.ADC.AIN3.$suggestSolution     = "ADC1_AIN3";
+adc1.ADC.AIN4.$suggestSolution     = "ADC1_AIN4";
+adc1.ADC.AIN5.$suggestSolution     = "ADC1_AIN5";
 eqep1.EQEP.STROBE.$suggestSolution = "EQEP0_STROBE";
 eqep1.EQEP.INDEX.$suggestSolution  = "EQEP0_INDEX";
