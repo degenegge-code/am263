@@ -35,25 +35,24 @@ int main(void)
     DebugP_log("board inited\n");
 
     //inits and starts:
-    //epwm_updown(NULL);
+    epwm_updown(NULL);
     irc_out_go();
-    //ecap_poll_init();
-    //pwm_conv_gen();
-    //submissive_gen(false);
-    //pwm_5p_off10(true, true);
-    //float f = ecap_poll_f_hz();
-    //DebugP_log("freq:  %f \n", f);
-    //pwm_5p_off10_2(false, true);
+    ecap_poll_init();
+    pwm_conv_gen();
+    submissive_gen(true);
+    pwm_5p_off10(true, true);
+    float f = ecap_poll_f_hz();
+    DebugP_log("freq:  %f \n", f);
+    pwm_5p_off10_2(true, true);
     eqep_speed_dir_init(NULL);
     int32_t f_irc = eqep_freq();
     ClockP_sleep(1);
     DebugP_log("freq_irc  %i \n", f_irc); 
-    //adc_debug();
+    adc_debug();
 
-    //posledni zkoušene:
+    ////posledni zkoušene:
     //while (1) {
-    //    ClockP_sleep(1);
-
+        ClockP_sleep(1);
     //}
 
 
