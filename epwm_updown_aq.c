@@ -99,7 +99,7 @@ void epwm_updown(void *args)
                                                         // Check the syscfg for configurations !!!
 
     DebugP_log("EPWMTest Started ...\r\n");
-    DebugP_log("EPWM Action Qualifier Module using tadytenbordel\r\n");
+    DebugP_log("EPWM Action Qualifier Module using tadytodle\r\n");
 
     SOC_setMultipleEpwmTbClk(epwmsMask, FALSE);     // Disabling tbclk sync for EPWM 0 for configuration
 

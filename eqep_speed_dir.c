@@ -93,6 +93,7 @@ void eqep_speed_dir_init(void *args)
 
     EQEP_loadUnitTimer(gEqepBaseAddr, UNIT_PERIOD); //radši to sem hodim i mimo syscfg
     EQEP_clearInterruptStatus(gEqepBaseAddr,EQEP_INT_UNIT_TIME_OUT|EQEP_INT_GLOBAL);     // Clear eqep interrupts
+    ClockP_usleep(10000);   //some time is needed to run before read, so its here
 }
 
 /*
@@ -137,12 +138,14 @@ void eqep_close(void)
  */
 int32_t eqep_freq(void)
 {
-    if (gDir > 0)
+    if (gDir==0)
     {
-    return gFreq;
+        DebugP_log("Dir is 0!!!");
+        return 666;
     }
-    else 
-    return (-1)*gFreq;
+    else {
+        return gDir*gFreq;
+    }
 }
 
 

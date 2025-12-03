@@ -35,25 +35,26 @@ int main(void)
     DebugP_log("board inited\n");
 
     //inits and starts:
-    epwm_updown(NULL);
+    //epwm_updown(NULL);
     irc_out_go();
-    ecap_poll_init();
-    pwm_conv_gen();
-    submissive_gen(false);
-    pwm_5p_off10(false, false);
-    float f = ecap_poll_f_hz();
-    DebugP_log("freq:  %f \n", f);
-    pwm_5p_off10_2(false, false);
+    //ecap_poll_init();
+    //pwm_conv_gen();
+    //submissive_gen(false);
+    //pwm_5p_off10(true, true);
+    //float f = ecap_poll_f_hz();
+    //DebugP_log("freq:  %f \n", f);
+    //pwm_5p_off10_2(false, true);
     eqep_speed_dir_init(NULL);
     int32_t f_irc = eqep_freq();
-    //ClockP_sleep(1);
+    ClockP_sleep(1);
     DebugP_log("freq_irc  %i \n", f_irc); 
+    //adc_debug();
 
     //posledni zkoušene:
-    while (1) {
-        adc_debug();
+    //while (1) {
+    //    ClockP_sleep(1);
 
-    }
+    //}
 
 
     //DebugP_log("running to infinity\n");
@@ -93,12 +94,12 @@ int main(void)
  * - INT_XBAR_2 (EQEP0_INT - isr get dir, get pos)
  * EPWM 3A/3B -> E3 / E2 -> HSEC 54 / 56 -> J21_3 / J21_4 (generuje up, komplemtární a/b uměle, moduluje sin)
  * - INT_XBAR_3 (přerušení na isr pwmky, modulace)
- * EPWM 4A/4B -> D1 / E4 -> HSEC 57 / 59 -> J21_5 / J21_6 (generuje up, komplemtární a/b uměle, moduluje cos, po 3s se synchronizuje s epwm4)
+ * EPWM 4A/4B -> D1 / E4 -> HSEC 57 / 59 -> J20_5 / J20_6 (generuje up, komplemtární a/b uměle, moduluje cos)
  * - INT_XBAR_4 (přerušení na isr pwmky, modulace)
- * EPWM 5A/5B -> F2 / G2 -> HSEC 61 / 63 -> J21_7 / J21_8 (generuje 5% pulsy 50kHz)
- * GPIO65 -> H1 -> HSEC 86 -> J21_18 (input pro signal 50kHz)
+ * ePWM5A/B -> F2 / G2 -> HSEC 61 / 63 -> J20_7 / J20_8 (generuje 5% pulsy 50kHz) 
+ * GPIO65 -> H1 -> HSEC 86 -> J21_18 (input pro signal PM 50kHz)
  * - CONFIG_INPUT_XBAR4 GPIO65 INPUT_XBAR_4
- * ePWM6A/B -> E1 / F3 -> HSEC 58 / 60 -> J21_5 / J21_6  (same functionality, checking multiple synchro)
+ * ePWM6A/B -> E1 / F3 -> HSEC 58 / 60 -> J21_5 / J21_6  (generuje 5% pulsy 50kHz)
  * ADC1 -> HSEC 12 -> ADC1_AIN0 -> J12_1 
  * - EPWM0 SOCs ADC1
  * - SW9.1 1-2 a SW9.2 4-5 je VREFLO

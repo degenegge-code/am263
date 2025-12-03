@@ -18,7 +18,7 @@
  * - TODO: deadtimes 
  *
  * Internal Connections SYSCFG:
- * EPWM 4A/4B -> D1 / E4 -> HSEC 57 / 59 -> J21_5 / J21_6 (generuje up, komplemtární a/b uměle, moduluje cos)
+ * EPWM 4A/4B -> D1 / E4 -> HSEC 57 / 59 -> J20_5 / J20_6 (generuje up, komplemtární a/b uměle, moduluje cos)
  * - INT_XBAR_4
  *
  *
@@ -204,10 +204,12 @@ void pwm_5p_off10(bool true_for_shift, bool true_for_osc)
     if (true_for_shift)
     {
         EPWM_setPhaseShift(gEpwmBaseAddr5, OFFSET_TICS_2);    //phase shift 10% of period
+        ClockP_sleep(1);
     }
     else
     {
         EPWM_setPhaseShift(gEpwmBaseAddr5, 0);    //zero phase shift, sync on rising edge, but with offset in inputxbar
+        ClockP_sleep(1);
     }
 
     if(true_for_osc)

@@ -6,6 +6,7 @@ zatim funguje:
 - Eqep pro zjišťování r\chlosti u irc čidla -hotovo
 - Ověřit funkci synchronizace PWM signálů generovaných pomocí dvou regulátorů. K tomu účelu nám M. Kopecký poskytnul druhý KIT i podvozkem na vyvedení signálů. Na jednom kitu generovat PWM signál, např. použít SW co již máme pro test ePWM a jako synchronizační signál OUT  použít ten druhý kanál s posunem ½ periody. Na druhém kitu generovat nejaký úzký puls cca 5% periody, který bude posunut oproti náběžné hraně synchronizačního  pulsu o 10% periody.
 - synchronizovat PWM výstup s jiným - tzn ovládám dva měniče o stejné frekvenci a stejným fázovým posunem, samozřejmě jiné pulsy. jednu modulovat jako sinusovku a druhou jako cosinusovku, ať je to pěkně vidět. bot pil je synchronizován, spouštím pulsy v botu, vypínám v comp. asymetrická pila. 
+- ADC čtení pomocí compC/D
 
 
 TOTO NELZE:
@@ -16,7 +17,6 @@ TODO:
 - Ověřit čtení čidla polohy, které hodnotu předává asynchronní nebo synchronní komunikací. Tj. buď použít UART pro asynchronní komunikaci. Chceme nulovou spotřebu CPU. Tj. nastavit UART, aby příchozí hodnoty ukládal přes sebe na jedno místo, které budeme číst.  Pokud je komunikace synchronní, tak použít SPI jednotku a nebo PRU-ICSSG (pokud ta sběrnice bude nějaká divná).
 - deadtimy
 
-- ADC čtení pomocí compC/D
 - sync přes sync signál vyveden externě. jeslti nebude rychlejší, než synchro na hranu
 
 
