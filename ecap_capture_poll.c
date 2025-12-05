@@ -27,9 +27,9 @@ uint32_t ecap_poll_prd_ns(void);
 //ostaní v mainu
 
 /*
- * ecap_poll_init - Init všeho, co projekt a SysConfig vytvořil, all něco mam uřž v tom mainu, tak 
+ * ecap_poll_init - Init všeho, co projekt a SysConfig vytvořil, all něco mam už v tom mainu, tak 
  *                  to tu není. Pozn.: ECAP je už zkonfigurován SysConfigem - zde pouze časovač a
- *                  capture engine spuštěnáí
+ *                  capture engine spuštění
  * Syscfg: all 4 events, f r f r edges, enable reset on every one, capture stops at 4, disable 
  *         sync-in and interrupts. goes through xbar0.
  * 

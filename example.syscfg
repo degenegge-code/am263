@@ -21,6 +21,8 @@ const epwm4           = epwm.addInstance();
 const epwm5           = epwm.addInstance();
 const epwm6           = epwm.addInstance();
 const epwm7           = epwm.addInstance();
+const epwm8           = epwm.addInstance();
+const epwm9           = epwm.addInstance();
 const eqep            = scripting.addModule("/drivers/eqep/eqep", {}, false);
 const eqep1           = eqep.addInstance();
 const gpio            = scripting.addModule("/drivers/gpio/gpio", {}, false);
@@ -65,6 +67,7 @@ const int_xbar2       = int_xbar.addInstance();
 const int_xbar3       = int_xbar.addInstance();
 const int_xbar4       = int_xbar.addInstance();
 const int_xbar5       = int_xbar.addInstance();
+const int_xbar6       = int_xbar.addInstance();
 
 /**
  * Write custom configuration values to the imported modules.
@@ -233,6 +236,33 @@ epwm7.epwmActionQualifier_EPWM_AQ_OUTPUT_B_ON_TIMEBASE_DOWN_CMPB = "EPWM_AQ_OUTP
 epwm7.EPWM.$assign                                               = "EPWM6";
 epwm7.EPWM.A.$assign                                             = "EPWM6_A";
 epwm7.EPWM.B.$assign                                             = "EPWM6_B";
+
+epwm8.$name                                          = "CONFIG_EPWM7";
+epwm8.epwmEventTrigger_enableInterrupt               = true;
+epwm8.epwmEventTrigger_interruptEventCountInitEnable = true;
+epwm8.epwmEventTrigger_interruptEventCountInitValue  = "1";
+epwm8.epwmTimebase_periodGld                         = true;
+epwm8.epwmCounterCompare_cmpAGld                     = true;
+epwm8.epwmCounterCompare_cmpBGld                     = true;
+epwm8.epwmCounterCompare_cmpA                        = 50;
+epwm8.epwmCounterCompare_cmpB                        = 50;
+epwm8.epwmEventTrigger_interruptEventCount           = "1";
+epwm8.epwmEventTrigger_interruptSource               = "EPWM_INT_TBCTR_PERIOD";
+epwm8.epwmTimebase_counterMode                       = "EPWM_COUNTER_MODE_UP";
+epwm8.epwmTimebase_period                            = 1000;
+epwm8.epwmTimebase_syncInPulseSource                 = "EPWM_SYNC_IN_PULSE_SRC_SYNCOUT_EPWM3";
+epwm8.hrpwm_syncSource                               = "HRPWM_PWMSYNC_SOURCE_ZERO";
+epwm8.EPWM.$assign                                   = "EPWM7";
+epwm8.EPWM.A.$assign                                 = "EPWM7_A";
+epwm8.EPWM.B.$assign                                 = "EPWM7_B";
+
+epwm9.$name                                    = "CONFIG_EPWM8";
+epwm9.epwmTimebase_periodGld                   = true;
+epwm9.epwmActionQualifier_EPWM_AQ_OUTPUT_A_gld = true;
+epwm9.epwmActionQualifier_EPWM_AQ_OUTPUT_B_gld = true;
+epwm9.EPWM.$assign                             = "EPWM8";
+epwm9.EPWM.A.$assign                           = "EPWM8_A";
+epwm9.EPWM.B.$assign                           = "EPWM8_B";
 
 eqep1.$name                = "CONFIG_EQEP0";
 eqep1.enableInterrupt      = true;
@@ -550,6 +580,10 @@ int_xbar4.instance   = "INT_XBAR_3";
 int_xbar5.$name      = "CONFIG_INT_XBAR4";
 int_xbar5.xbarOutput = ["EPWM4_INT"];
 int_xbar5.instance   = "INT_XBAR_4";
+
+int_xbar6.xbarOutput = ["EPWM7_INT"];
+int_xbar6.instance   = "INT_XBAR_7";
+int_xbar6.$name      = "CONFIG_INT_XBAR7";
 
 /**
  * Pinmux solution for unlocked pins/peripherals. This ensures that minor changes to the automatic solver in a future

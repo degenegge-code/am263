@@ -22,6 +22,7 @@ void submissive_gen(bool true_for_osc);              //pwm konvertoru generátor
 void pwm_5p_off10(bool true_for_shift, bool true_for_osc); //rozjede pwmku a po 3s sync s gpio65, když true_for_osc
 void pwm_5p_off10_2(bool true_for_shift, bool true_for_osc); //rozjede pwmku a po 3s sync s gpio65, když true_for_osc
 void adc_debug(void);       //prints adc values
+void pwm_conv_gen2(void);   //DB PWM
 
 
 
@@ -35,29 +36,32 @@ int main(void)
     DebugP_log("board inited\n");
 
     //inits and starts:
-    //epwm_updown(NULL);
+    epwm_updown(NULL);
     irc_out_go();
-    //ecap_poll_init();
-    //pwm_conv_gen();
-    //submissive_gen(false);
-    //pwm_5p_off10(true, true);
-    //float f = ecap_poll_f_hz();
-    //DebugP_log("freq:  %f \n", f);
-    //pwm_5p_off10_2(false, true);
+    ecap_poll_init();
+    pwm_conv_gen();
+    submissive_gen(true);
+    pwm_5p_off10(true, true);
+    float f = ecap_poll_f_hz();
+    DebugP_log("freq:  %f \n", f);
+    pwm_5p_off10_2(false, true);
     eqep_speed_dir_init(NULL);
     int32_t f_irc = eqep_freq();
     ClockP_sleep(1);
     DebugP_log("freq_irc  %i \n", f_irc); 
-    //adc_debug();
+    adc_debug();
 
     //posledni zkoušene:
-    //while (1) {
-    //    ClockP_sleep(1);
-
-    //}
+    pwm_conv_gen2();
 
 
-    //DebugP_log("running to infinity\n");
+    while (1) {
+        ClockP_sleep(1);
+
+    }
+
+
+    DebugP_log("running to infinity\n");
 
     //closes:
     ecap_poll_close();
@@ -79,11 +83,9 @@ int main(void)
  *
  * Celej xample map:
  *
- * EPWM 0A/0B -> B2 / B1 -> HSEC 49 / 51 -> J20_1 / J20_2 (generuje updown pwm 50khz)
- * - GPIO 43,  GPIO 44
+ * EPWM 0A/0B -> B2 / B1 (GPIO 43,  GPIO 44)-> HSEC 49 / 51 -> J20_1 / J20_2 (generuje updown pwm 50khz)
  * - INT XBAR0 (isr nic nedělá vlastně)
- * EPWM 1A/1B -> D3 / D2 -> HSEC 53 / 55 -> J20_3 / J20_4 (generuje předsazenou pwm k 0)
- * - GPIO 45, GPIO 46
+ * EPWM 1A/1B -> D3 / D2 (GPIO 45, GPIO 46)-> HSEC 53 / 55 -> J20_3 / J20_4 (generuje předsazenou pwm k 0)
  * - INT XBAR1 (isr nic nedělá vlastně)
  * ECAP - čtu epwm0 jako že to je převodník u / f, bez přerušení:
  * - epwm0 ball B1 -> gpio 43 -> epwmtoecap_INPUT_XBAR0 -> Capture input is InputXBar Output 0
@@ -103,4 +105,6 @@ int main(void)
  * ADC1 -> HSEC 12 -> ADC1_AIN0 -> J12_1 
  * - EPWM0 SOCs ADC1
  * - SW9.1 1-2 a SW9.2 4-5 je VREFLO
+ * EPWM7A/B -> F4 / F1 -> HSEC 62 / 64 -> J21_7 / J21_8 
+ * - CSLR_R5FSS0_CORE0_CONTROLSS_INTRXBAR0_OUT_5   
  */
